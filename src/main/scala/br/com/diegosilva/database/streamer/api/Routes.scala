@@ -9,7 +9,7 @@ import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
 
 object Routes {
-  def apply() = new Routes()
+  def apply() = new Routes().routes
 }
 
 class Routes() extends FailFastCirceSupport with CirceJsonProtocol {

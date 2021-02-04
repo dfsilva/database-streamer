@@ -33,20 +33,10 @@ object Guardian {
       val httpPort = context.system.settings.config.getInt("server.http.port")
       val seedNodes: Array[Address] =
         sys.env("SEED_NODES").split(",").map(AddressFromURIString.parse)
+
       Cluster(context.system).manager ! JoinSeedNodes(seedNodes)
 
-      val routes = Routes()
-      new Server(routes.routes, httpPort, context.system).start()
-
-      val database = SlickExtension(context.system).database(context.system.settings.config.getConfig("jdbc-journal"))
-      val flyway = Flyway.configure()
-        .dataSource(database.database.source.asInstanceOf[HikariCPJdbcDataSource].ds).load()
-
-      Try(flyway.migrate()) match {
-        case Success(_) => log.error("Migration success")
-        case Failure(e) =>
-          log.error("Migration failed", e)
-      }
+      Server(Routes(), httpPort, context.system).start()
 
       SpawnProtocol()
     }
