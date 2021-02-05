@@ -16,9 +16,9 @@ class DbExtensionImpl(system: ActorSystem[_], val datasource: HikariDataSource) 
   def connection(): Connection = datasource.getConnection
 }
 
-object MigrationExtension extends ExtensionId[DbExtensionImpl] {
+object DbExtension extends ExtensionId[DbExtensionImpl] {
 
-  private val log = LoggerFactory.getLogger(MigrationExtension.getClass)
+  private val log = LoggerFactory.getLogger(DbExtension.getClass)
 
   override def createExtension(system: ActorSystem[_]): DbExtensionImpl = {
 
