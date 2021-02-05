@@ -21,6 +21,7 @@ object Main extends App {
   implicit val scheduler = system.scheduler
   implicit val executionContext = system.executionContext
   implicit val classicSystem = system.classicSystem
+  implicit val db: HikariCPJdbcDataSource =
 
 }
 

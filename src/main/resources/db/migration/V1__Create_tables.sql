@@ -8,12 +8,13 @@ CREATE SEQUENCE sq_database_stream_events
     NO CYCLE;
 
 --Events table
-CREATE TABLE tb_database_stream_events (
-      id bigserial NOT NULL,
-      event_timestamp timestamp NOT NULL,
-      topic varchar(100) NULL,
-      body text NULL,
-      CONSTRAINT tb_database_stream_events_key PRIMARY KEY (id)
+CREATE TABLE tb_database_stream_events
+(
+    id              bigserial    NOT NULL,
+    event_timestamp timestamp    NOT NULL,
+    topic           varchar(100) NULL,
+    body            text         NULL,
+    CONSTRAINT tb_database_stream_events_key PRIMARY KEY (id)
 );
 
 --Akka tables
@@ -38,4 +39,13 @@ CREATE TABLE IF NOT EXISTS snapshot
     created         BIGINT       NOT NULL,
     snapshot        BYTEA        NOT NULL,
     PRIMARY KEY (persistence_id, sequence_number)
+);
+
+CREATE TABLE table_streams
+(
+    id          SERIAL PRIMARY KEY,
+    title       VARCHAR NOT NULL,
+    description VARCHAR NULL,
+    table       VARCHAR NOT NULL,
+    topic       VARCHAR NOT NULL
 );
