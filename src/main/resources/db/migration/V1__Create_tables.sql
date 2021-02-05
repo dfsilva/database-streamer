@@ -1,5 +1,4 @@
---SEQUENCE
-CREATE SEQUENCE sq_database_stream_events
+CREATE SEQUENCE database_streamer.sq_events
     INCREMENT BY 1
     MINVALUE 1
     MAXVALUE 9223372036854775807
@@ -7,19 +6,25 @@ CREATE SEQUENCE sq_database_stream_events
     CACHE 1
     NO CYCLE;
 
---Events table
-CREATE TABLE tb_database_stream_events
+CREATE TABLE database_streamer.events
 (
-    id              bigserial    NOT NULL,
-    event_timestamp timestamp    NOT NULL,
-    topic           varchar(100) NULL,
-    body            text         NULL,
-    CONSTRAINT tb_database_stream_events_key PRIMARY KEY (id)
+    id          SERIAL PRIMARY KEY,
+    create_time TIMESTAMP NOT NULL,
+    topic       VARCHAR   NULL,
+    body        TEXT      NULL
 );
 
---Akka tables
-DROP TABLE IF EXISTS journal;
-CREATE TABLE IF NOT EXISTS journal
+CREATE TABLE database_streamer.streams
+(
+    id          SERIAL PRIMARY KEY,
+    title       VARCHAR NOT NULL,
+    description VARCHAR NULL,
+    table_name  VARCHAR NOT NULL,
+    topic       VARCHAR NOT NULL
+);
+
+DROP TABLE IF EXISTS database_streamer.journal;
+CREATE TABLE IF NOT EXISTS database_streamer.journal
 (
     ordering        BIGSERIAL,
     persistence_id  VARCHAR(255)               NOT NULL,
@@ -29,10 +34,10 @@ CREATE TABLE IF NOT EXISTS journal
     message         BYTEA                      NOT NULL,
     PRIMARY KEY (persistence_id, sequence_number)
 );
+CREATE UNIQUE INDEX journal_ordering_idx ON database_streamer.journal (ordering);
 
-CREATE UNIQUE INDEX journal_ordering_idx ON journal (ordering);
-DROP TABLE IF EXISTS snapshot;
-CREATE TABLE IF NOT EXISTS snapshot
+DROP TABLE IF EXISTS database_streamer.snapshot;
+CREATE TABLE IF NOT EXISTS database_streamer.snapshot
 (
     persistence_id  VARCHAR(255) NOT NULL,
     sequence_number BIGINT       NOT NULL,
@@ -41,11 +46,4 @@ CREATE TABLE IF NOT EXISTS snapshot
     PRIMARY KEY (persistence_id, sequence_number)
 );
 
-CREATE TABLE table_streams
-(
-    id          SERIAL PRIMARY KEY,
-    title       VARCHAR NOT NULL,
-    description VARCHAR NULL,
-    table       VARCHAR NOT NULL,
-    topic       VARCHAR NOT NULL
-);
+

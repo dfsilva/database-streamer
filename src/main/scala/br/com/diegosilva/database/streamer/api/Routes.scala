@@ -4,12 +4,14 @@ package br.com.diegosilva.database.streamer.api
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.StatusCodes.InternalServerError
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
-import akka.persistence.jdbc.db.SlickExtension
+import akka.http.scaladsl.server.Route
+import br.com.diegosilva.database.streamer.db.DbExtension
+import br.com.diegosilva.database.streamer.repo.TriggersRepo
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
 
 object Routes {
-  def apply() = new Routes().routes
+  def apply(): Route = new Routes().routes
 }
 
 class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
@@ -18,10 +20,12 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
   import Directives._
   import br.com.diegosilva.database.streamer.Main._
   import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
+  import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
   private val sharding = ClusterSharding(system)
-  private val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
+  private val connection = DbExtension(system).connection()
+
 
   val errorHandler = ExceptionHandler {
     case ex =>
@@ -37,7 +41,13 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
         cors() {
           pathPrefix("api") {
             concat(
-
+              pathPrefix("streams") {
+                post {
+                  entity(as[AddTableStream]) { data =>
+                    complete(TriggersRepo.createTrigger(data.table, data.topic, connection.getConnection))
+                  }
+                }
+              }
             )
           }
         },

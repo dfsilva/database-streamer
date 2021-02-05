@@ -12,8 +12,7 @@ import java.sql.Connection
 import scala.util.{Failure, Success, Try}
 
 class DbExtensionImpl(system: ActorSystem[_], val datasource: HikariDataSource) extends Extension {
-
-  def connection(): Connection = datasource.getConnection
+  def connection(): HikariDataSource = datasource
 }
 
 object DbExtension extends ExtensionId[DbExtensionImpl] {
