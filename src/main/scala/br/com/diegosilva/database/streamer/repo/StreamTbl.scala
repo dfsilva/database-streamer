@@ -3,13 +3,13 @@ package br.com.diegosilva.database.streamer.repo
 import br.com.diegosilva.database.streamer.repo.PostgresProfile.api._
 import slick.lifted.ProvenShape
 
-case class Stream(id: Option[Long],
-                  title: String,
-                  description: Option[String],
-                  table: String,
-                  topic: String)
+case class StreamTbl(id: Option[Long],
+                     title: String,
+                     description: Option[String],
+                     table: String,
+                     topic: String)
 
-class StreamsTable(tag: Tag) extends Table[Stream](tag, "streams") {
+class StreamsTable(tag: Tag) extends Table[StreamTbl](tag, "streams") {
 
   def id: Rep[Long] = column[Long]("id", O.AutoInc, O.PrimaryKey)
 
@@ -21,14 +21,14 @@ class StreamsTable(tag: Tag) extends Table[Stream](tag, "streams") {
 
   def topic: Rep[String] = column[String]("topic")
 
-  def * : ProvenShape[Stream] = (id.?, title, description.?, table, topic) <> (Stream.tupled, Stream.unapply)
+  def * : ProvenShape[StreamTbl] = (id.?, title, description.?, table, topic) <> (StreamTbl.tupled, StreamTbl.unapply)
 
 }
 
-object StreamsRepo {
+object StreamTblRepo {
   val table = TableQuery[StreamsTable]
 
-  def add(stream: Stream): DBIO[Stream] = {
+  def add(stream: StreamTbl): DBIO[StreamTbl] = {
     table returning table += stream
   }
 

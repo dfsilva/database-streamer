@@ -1,7 +1,7 @@
 package br.com.diegosilva.database.streamer.db
 
 import akka.actor.typed.{ActorSystem, Extension, ExtensionId}
-import akka.persistence.jdbc.db.SlickExtension
+import akka.persistence.jdbc.db.{SlickDatabase, SlickExtension}
 import com.zaxxer.hikari.HikariDataSource
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
@@ -11,8 +11,9 @@ import slick.jdbc.hikaricp.HikariCPJdbcDataSource
 import java.sql.Connection
 import scala.util.{Failure, Success, Try}
 
-class DbExtensionImpl(system: ActorSystem[_], val datasource: HikariDataSource) extends Extension {
+class DbExtensionImpl(system: ActorSystem[_], val datasource: HikariDataSource, val database:Database) extends Extension {
   def connection(): HikariDataSource = datasource
+  def db(): Database = database
 }
 
 object DbExtension extends ExtensionId[DbExtensionImpl] {
@@ -35,7 +36,7 @@ object DbExtension extends ExtensionId[DbExtensionImpl] {
       db.close()
     })(system.executionContext)
 
-    new DbExtensionImpl(system, pool)
+    new DbExtensionImpl(system, pool, db)
   }
 
   private def getDb(system: ActorSystem[_]): Database = {
