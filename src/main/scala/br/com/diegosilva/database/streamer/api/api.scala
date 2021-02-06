@@ -6,7 +6,9 @@ package object api {
                             description: Option[String],
                             schema: String,
                             table: String,
-                            topic: String) extends CborSerializable
+                            topic: String,
+                            delete: Boolean,
+                            insert) extends CborSerializable
 
 
 }
