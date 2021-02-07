@@ -3,14 +3,23 @@ package br.com.diegosilva.database.streamer.actors
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{Behavior, PostStop, PreRestart, SupervisorStrategy}
 import br.com.diegosilva.database.streamer.CborSerializable
-import br.com.diegosilva.database.streamer.repo.Event
 import com.zaxxer.hikari.HikariDataSource
+import io.circe.Decoder
+import io.circe.parser.decode
 import org.slf4j.LoggerFactory
 
 object ListenerActor {
 
-  import io.circe.syntax._
   private val log = LoggerFactory.getLogger(ListenerActor.getClass)
+
+  case class ReceivedEvent(id: Long,
+                           time: String,
+                           topic: String,
+                           oldData: String,
+                           newData: String) extends CborSerializable
+
+  implicit val receivedEventTupled: Decoder[ReceivedEvent] =
+    Decoder.forProduct5("id", "create_time", "topic", "old_data", "new_data")(ReceivedEvent.apply)
 
   sealed trait Command extends CborSerializable
 
@@ -33,16 +42,13 @@ object ListenerActor {
             if (notifications != null && !notifications.isEmpty) {
               notifications.foreach(notification => {
                 log.debug("Received notification: {}", notification)
-
-                notification.getParameter.asJsonObject
-
-                //                decode[Event](notification.getParameter) match {
-                //                  case Right(event) => {
-                //                    log.debug("New data: {}",event.newData)
-                //                  }
-                //                  case _ =>
-                //                    log.error("Error parsing notification: {}", notification.getParameter)
-                //                }
+                decode[ReceivedEvent](notification.getParameter) match {
+                  case Right(event) => {
+                    log.debug("New data: {}", event.newData)
+                  }
+                  case Left(error) =>
+                    log.error("Error parsing notification: {} {}", notification.getParameter, error.getMessage)
+                }
               })
             }
           }

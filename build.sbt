@@ -40,6 +40,7 @@ libraryDependencies ++= {
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
+    "io.circe" %% "circe-generic-extras" % circeVersion,
 
     "de.heikoseeberger" %% "akka-http-circe" % "1.35.2",
 

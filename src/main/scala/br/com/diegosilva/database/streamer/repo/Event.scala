@@ -2,7 +2,6 @@ package br.com.diegosilva.database.streamer.repo
 
 import br.com.diegosilva.database.streamer.repo.PostgresProfile.api._
 import slick.lifted.ProvenShape
-
 import java.sql.Timestamp
 
 case class Event(id: Option[Long],

@@ -22,9 +22,7 @@ object CirceJsonProtocol {
     override def apply(c: HCursor): Result[java.sql.Date] = Decoder.decodeString.map(s => new java.sql.Date(new SimpleDateFormat("dd/MM/yyyy").parse(s).getTime)).apply(c)
   }
 
-//  implicit def outcomeWsMessage[T: Encoder]: Encoder[Event] = deriveEncoder
 
-  implicit def eventDecoder[T: Decoder]: Decoder[Event] = deriveDecoder
 
 }
 
