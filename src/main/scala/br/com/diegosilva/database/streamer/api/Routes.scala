@@ -24,7 +24,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
 
   private lazy val log = LoggerFactory.getLogger(getClass)
   private val sharding = ClusterSharding(system)
-  private val connection = DbExtension(system).connection()
+  private val connection = DbExtension(system).dataSource()
   private val db = DbExtension(system).db()
 
 

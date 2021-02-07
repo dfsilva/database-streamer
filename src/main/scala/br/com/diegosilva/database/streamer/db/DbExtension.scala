@@ -11,8 +11,8 @@ import slick.jdbc.hikaricp.HikariCPJdbcDataSource
 import java.sql.Connection
 import scala.util.{Failure, Success, Try}
 
-class DbExtensionImpl(system: ActorSystem[_], val datasource: HikariDataSource, val database:Database) extends Extension {
-  def connection(): HikariDataSource = datasource
+class DbExtensionImpl(system: ActorSystem[_], val ds: HikariDataSource, val database:Database) extends Extension {
+  def dataSource(): HikariDataSource = ds
   def db(): Database = database
 }
 

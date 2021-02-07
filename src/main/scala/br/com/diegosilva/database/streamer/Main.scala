@@ -3,17 +3,13 @@ package br.com.diegosilva.database.streamer
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior, SpawnProtocol}
 import akka.actor.{Address, AddressFromURIString}
-import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.typed.{Cluster, JoinSeedNodes}
-import akka.persistence.jdbc.db.SlickExtension
 import akka.util.Timeout
+import br.com.diegosilva.database.streamer.actors.ListenerActor
 import br.com.diegosilva.database.streamer.api.{Routes, Server}
+import br.com.diegosilva.database.streamer.db.DbExtension
 import com.typesafe.config.ConfigFactory
-import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
-import slick.jdbc.hikaricp.HikariCPJdbcDataSource
-
-import scala.util.{Failure, Success, Try}
 
 object Main extends App {
   implicit val system = ActorSystem[SpawnProtocol.Command](Guardian(), "DatabaseStreamerSystem", ConfigFactory.load)
@@ -37,6 +33,8 @@ object Guardian {
       Cluster(context.system).manager ! JoinSeedNodes(seedNodes)
 
       Server(Routes(), httpPort, context.system).start()
+
+      context.spawn(ListenerActor(DbExtension(context.system).dataSource()), "listener-actor") ! ListenerActor.Start
 
       SpawnProtocol()
     }
