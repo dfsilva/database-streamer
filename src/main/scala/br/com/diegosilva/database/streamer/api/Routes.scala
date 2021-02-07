@@ -14,8 +14,9 @@ object Routes {
   def apply(): Route = new Routes().routes
 }
 
-class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
+class Routes() extends FailFastCirceSupport  {
 
+  import br.com.diegosilva.database.streamer.api.CirceJsonProtocol._
   import akka.http.scaladsl.server._
   import Directives._
   import br.com.diegosilva.database.streamer.Main._

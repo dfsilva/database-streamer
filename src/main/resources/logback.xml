@@ -15,7 +15,7 @@
     <logger name="com.datastax.driver.core.Connection" level="ERROR"/>
     <logger name="com.codahale.metrics" level="ERROR"/>
     <logger name="akka" level="ERROR"/>
-    <logger name="br.com.diegosilva" level="INFO"/>
+    <logger name="br.com.diegosilva" level="TRACE"/>
 
     <appender name="ASYNCFILE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>8192</queueSize>

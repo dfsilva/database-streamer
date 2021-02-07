@@ -37,12 +37,12 @@ object TriggersRepo {
        |    LANGUAGE plpgsql
        |AS $$function$$
        |DECLARE
-       |    eventsRow events%ROWTYPE;
+       |    eventsRow database_streamer.events%ROWTYPE;
        |    content text;
        |    contentSize int;
        |begin
-       |    SELECT nextval('database_streamer.sq_events'::regclass),now(),'$topic', row_to_json(new) INTO eventsRow;
-       |    INSERT INTO database_streamer.events(id,event_timestamp,topic,body) values (eventsRow.*);
+       |    SELECT nextval('database_streamer.sq_events'::regclass),now(),'$topic','',row_to_json(new) INTO eventsRow;
+       |    INSERT INTO database_streamer.events(id,create_time,topic,old_data,new_data) values (eventsRow.*);
        |    content := row_to_json(eventsRow)::text;
        |    contentSize := octet_length(content);
        |    if contentSize <= 8000 then

@@ -34,7 +34,7 @@ object Guardian {
 
       Server(Routes(), httpPort, context.system).start()
 
-      context.spawn(ListenerActor(DbExtension(context.system).dataSource()), "listener-actor") ! ListenerActor.Start
+      context.spawn(ListenerActor(DbExtension(context.system).dataSource()), "listener-actor") ! ListenerActor.StartListener
 
       SpawnProtocol()
     }

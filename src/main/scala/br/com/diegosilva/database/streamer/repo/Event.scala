@@ -8,7 +8,8 @@ import java.sql.Timestamp
 case class Event(id: Option[Long],
                  createTime: Timestamp,
                  topic: String,
-                 body: String)
+                 oldData: String,
+                 newData: String)
 
 class EventsTable(tag: Tag) extends Table[Event](tag, "events") {
 
@@ -18,9 +19,11 @@ class EventsTable(tag: Tag) extends Table[Event](tag, "events") {
 
   def topic: Rep[String] = column[String]("topic")
 
-  def body: Rep[String] = column[String]("body")
+  def oldData: Rep[String] = column[String]("old_data")
 
-  def * : ProvenShape[Event] = (id.?, createTime, topic, body) <> (Event.tupled, Event.unapply)
+  def newData: Rep[String] = column[String]("new_data")
+
+  def * : ProvenShape[Event] = (id.?, createTime, topic, oldData, newData) <> (Event.tupled, Event.unapply)
 
 }
 

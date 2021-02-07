@@ -8,7 +8,7 @@ package object api {
                             table: String,
                             topic: String,
                             delete: Boolean,
-                            insert) extends CborSerializable
-
+                            insert: Boolean,
+                            update: Boolean) extends CborSerializable
 
 }
