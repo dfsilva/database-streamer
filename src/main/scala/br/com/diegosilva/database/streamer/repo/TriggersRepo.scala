@@ -5,34 +5,32 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object TriggersRepo {
 
-  def createFunction(table: String, topic: String, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
+  def create(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
     Future {
-      connection.createStatement().execute(getFunctionTemplate(table, topic))
+      try {
+        connection.createStatement().execute(getFunctionTemplate(table, topic))
+        connection.createStatement().execute(getTriggerTemplate(schema, table, topic, delete, insert, update))
+      } finally {
+        connection.close()
+      }
     }
   }
 
-  def createTrigger(schema:String, table: String, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
+
+  def delete(schema: String, topic: String, table: String, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
     Future {
-      connection.createStatement().execute(getTriggerTemplate(schema, table))
+      try{
+        connection.createStatement().execute(getDropTrigger(schema, topic, table))
+        connection.createStatement().execute(getDropFunction(topic, table))
+      }finally {
+        connection.close()
+      }
     }
   }
-
-  def deleteFunction(table: String, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
-    Future {
-      connection.createStatement().execute(getDropFunction(table))
-    }
-  }
-
-  def deleteTrigger(schema: String, table: String, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
-    Future {
-      connection.createStatement().execute(getDropTrigger(schema, table))
-    }
-  }
-
 
   def getFunctionTemplate(table: String, topic: String): String = {
     s"""
-       |CREATE OR REPLACE FUNCTION database_streamer.notify_$table()
+       |CREATE OR REPLACE FUNCTION database_streamer.notify_${topic}_$table()
        |    RETURNS trigger
        |    LANGUAGE plpgsql
        |AS $$function$$
@@ -54,20 +52,41 @@ object TriggersRepo {
        |""".stripMargin
   }
 
-  def getTriggerTemplate(schema:String, table: String): String = {
+  def getTriggerTemplate(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean): String = {
+
+    val build = new StringBuilder("")
+
+    if (insert) {
+      build.addAll("INSERT")
+    }
+
+    if (update) {
+      if (insert)
+        build.addAll(" or UPDATE")
+      else
+        build.addAll(" UPDATE")
+    }
+
+    if (delete) {
+      if (insert || update)
+        build.addAll(" or DELETE")
+      else
+        build.addAll(" DELETE")
+    }
+
     s"""
-       |create trigger ${table}_changes after
-       |    INSERT or UPDATE
+       |create trigger ${topic}_${table} after
+       |    ${build.toString()}
        |    on
-       |        ${schema}.${table} for each row execute procedure database_streamer.notify_$table();
+       |        ${schema}.${table} for each row execute procedure database_streamer.notify_${topic}_$table();
        |""".stripMargin
   }
 
-  def getDropFunction(table: String): String = {
-    s"drop function database_streamer.notify_$table();"
+  def getDropFunction(topic: String, table: String): String = {
+    s"drop function database_streamer.notify_${topic}_$table();"
   }
 
-  def getDropTrigger(schema: String, table: String): String = {
-    s"drop trigger ${table}_changes on ${schema}.$table;"
+  def getDropTrigger(schema: String, topic: String, table: String): String = {
+    s"drop trigger ${topic}_${table} on ${schema}.$table;"
   }
 }

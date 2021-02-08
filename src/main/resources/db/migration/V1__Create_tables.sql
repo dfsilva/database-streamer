@@ -17,11 +17,14 @@ CREATE TABLE database_streamer.events
 
 CREATE TABLE database_streamer.streams
 (
-    id          SERIAL PRIMARY KEY,
-    title       VARCHAR NOT NULL,
-    description VARCHAR NULL,
-    table_name  VARCHAR NOT NULL,
-    topic       VARCHAR NOT NULL
+    topic         VARCHAR PRIMARY KEY,
+    stream_table  VARCHAR NOT NULL,
+    stream_schema VARCHAR NOT NULL,
+    title         VARCHAR NOT NULL,
+    description   VARCHAR NULL,
+    delete        boolean NOT NULL,
+    insert        boolean NOT NULL,
+    update        boolean NOT NULL
 );
 
 DROP TABLE IF EXISTS database_streamer.journal;

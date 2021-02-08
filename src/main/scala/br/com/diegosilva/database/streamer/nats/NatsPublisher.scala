@@ -21,8 +21,6 @@ class NatsPublisher(connection: StreamingConnection, queue: String, content: Str
     val p = Promise[String]()
     Future {
       log.info(s"Publicando na fila na fila $queue")
-
-      throw new RuntimeException("teste erro")
       connection.publish(queue, content.getBytes, (nuid: String, ex: Exception) => {
         if (ex != null)
           p.failure(ex)

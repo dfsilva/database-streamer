@@ -1,7 +1,7 @@
 package br.com.diegosilva.database.streamer.actors
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.actor.typed.{ActorSystem, Behavior, SupervisorStrategy}
+import akka.actor.typed._
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
@@ -67,9 +67,16 @@ object PublisherActor {
         (state, event) => handlerEvent(state, event))
         .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 5, keepNSnapshots = 3))
         .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
+        .receiveSignal {
+          case (context, PostStop) =>
+            log.info(s"Stoping publisher {}", id)
+            Behaviors.same
+          case (context, PreRestart) =>
+            log.info(s"Restarting Publisher {}", id)
+            Behaviors.same
+        }
     }
   }
-
 
   private def handlerCommands(id: String, state: State, command: Command,
                               context: ActorContext[Command]): Effect[Event, State] = {

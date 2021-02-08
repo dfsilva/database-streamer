@@ -23,7 +23,7 @@ object CirceJsonProtocol {
 
 
   implicit val databaseNotificationDecodeer: Decoder[DatabaseNotification] =
-    Decoder.forProduct5("id", "create_time", "topic", "old_data", "new_data")(DatabaseNotification.apply)
+    Decoder.forProduct5("id", "create_time", "topic", "old", "current")(DatabaseNotification.apply)
 
 
   implicit val natsNotificationEncoder: Encoder[NatsNotification] =
