@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorSystem, Behavior, SpawnProtocol}
 import akka.actor.{Address, AddressFromURIString}
 import akka.cluster.typed.{Cluster, JoinSeedNodes}
 import akka.util.Timeout
-import br.com.diegosilva.database.streamer.actors.ListenerActor
+import br.com.diegosilva.database.streamer.actors.{ListenerActor, PublisherActor}
 import br.com.diegosilva.database.streamer.api.{Routes, Server}
 import br.com.diegosilva.database.streamer.db.DbExtension
 import com.typesafe.config.ConfigFactory
@@ -31,6 +31,8 @@ object Guardian {
         sys.env("SEED_NODES").split(",").map(AddressFromURIString.parse)
 
       Cluster(context.system).manager ! JoinSeedNodes(seedNodes)
+
+      PublisherActor.init(context.system)
 
       Server(Routes(), httpPort, context.system).start()
 

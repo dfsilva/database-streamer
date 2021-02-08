@@ -1,8 +1,7 @@
 package br.com.diegosilva.database.streamer.api
 
-import br.com.diegosilva.database.streamer.repo.Event
+import br.com.diegosilva.database.streamer.actors.{DatabaseNotification, NatsNotification}
 import io.circe.Decoder.Result
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder, HCursor, Json}
 
 import java.sql.Timestamp
@@ -23,6 +22,11 @@ object CirceJsonProtocol {
   }
 
 
+  implicit val databaseNotificationDecodeer: Decoder[DatabaseNotification] =
+    Decoder.forProduct5("id", "create_time", "topic", "old_data", "new_data")(DatabaseNotification.apply)
 
+
+  implicit val natsNotificationEncoder: Encoder[NatsNotification] =
+    Encoder.forProduct2("old", "current")(n => (n.old, n.current))
 }
 

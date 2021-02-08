@@ -2,36 +2,30 @@ package br.com.diegosilva.database.streamer.actors
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{Behavior, PostStop, PreRestart, SupervisorStrategy}
+import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import br.com.diegosilva.database.streamer.CborSerializable
 import com.zaxxer.hikari.HikariDataSource
-import io.circe.Decoder
 import io.circe.parser.decode
 import org.slf4j.LoggerFactory
 
 object ListenerActor {
 
+  import br.com.diegosilva.database.streamer.api.CirceJsonProtocol._
+
   private val log = LoggerFactory.getLogger(ListenerActor.getClass)
-
-  case class ReceivedEvent(id: Long,
-                           time: String,
-                           topic: String,
-                           oldData: String,
-                           newData: String) extends CborSerializable
-
-  implicit val receivedEventTupled: Decoder[ReceivedEvent] =
-    Decoder.forProduct5("id", "create_time", "topic", "old_data", "new_data")(ReceivedEvent.apply)
 
   sealed trait Command extends CborSerializable
 
   final case object StartListener extends Command
 
-  def apply(datasource: HikariDataSource): Behavior[ListenerActor.Command] = Behaviors.supervise(behaviros(datasource))
+  def apply(datasource: HikariDataSource): Behavior[ListenerActor.Command] = Behaviors.supervise(behaviors(datasource))
     .onFailure(SupervisorStrategy.restart)
 
-  def behaviros(datasource: HikariDataSource): Behavior[ListenerActor.Command] =
+  def behaviors(datasource: HikariDataSource): Behavior[ListenerActor.Command] =
     Behaviors.setup { context =>
       Behaviors.receiveMessage[ListenerActor.Command] {
         case StartListener =>
+          context.log.info(s"Start Listener....")
           val connection = datasource.getConnection()
           val statement = connection.createStatement()
           statement.execute("LISTEN events_notify")
@@ -42,9 +36,10 @@ object ListenerActor {
             if (notifications != null && !notifications.isEmpty) {
               notifications.foreach(notification => {
                 log.debug("Received notification: {}", notification)
-                decode[ReceivedEvent](notification.getParameter) match {
+                decode[DatabaseNotification](notification.getParameter) match {
                   case Right(event) => {
-                    log.debug("New data: {}", event.newData)
+                    val entityRef = ClusterSharding(context.system).entityRefFor(PublisherActor.EntityKey, event.topic)
+                    entityRef ! PublisherActor.AddToProcess(event)
                   }
                   case Left(error) =>
                     log.error("Error parsing notification: {} {}", notification.getParameter, error.getMessage)
@@ -55,13 +50,12 @@ object ListenerActor {
           Behaviors.same
       }.receiveSignal {
         case (context, PostStop) =>
-          context.log.info(s"Stoping actor...")
+          context.log.info(s"Stoping Listener...")
           Behaviors.same
         case (context, PreRestart) =>
+          context.log.info(s"Restarting Listener....")
           context.self ! StartListener
           Behaviors.same
       }
     }
-
-
 }

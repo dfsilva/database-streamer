@@ -41,8 +41,8 @@ object TriggersRepo {
        |    content text;
        |    contentSize int;
        |begin
-       |    SELECT nextval('database_streamer.sq_events'::regclass),now(),'$topic','',row_to_json(new) INTO eventsRow;
-       |    INSERT INTO database_streamer.events(id,create_time,topic,old_data,new_data) values (eventsRow.*);
+       |    SELECT nextval('database_streamer.sq_events'::regclass),now(),'$topic',row_to_json(old),row_to_json(new) INTO eventsRow;
+       |    INSERT INTO database_streamer.events(id,create_time,topic,old,current) values (eventsRow.*);
        |    content := row_to_json(eventsRow)::text;
        |    contentSize := octet_length(content);
        |    if contentSize <= 8000 then

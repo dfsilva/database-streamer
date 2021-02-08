@@ -11,8 +11,8 @@ CREATE TABLE database_streamer.events
     id          SERIAL PRIMARY KEY,
     create_time TIMESTAMP NOT NULL,
     topic       VARCHAR   NULL,
-    old_data    TEXT      NULL,
-    new_data    TEXT      NULL
+    old         TEXT      NULL,
+    current     TEXT      NULL
 );
 
 CREATE TABLE database_streamer.streams
