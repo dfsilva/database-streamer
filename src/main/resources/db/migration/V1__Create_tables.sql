@@ -1,3 +1,37 @@
+CREATE TABLE database_streamer.event_journal
+(
+    "ordering"         bigserial    NOT NULL,
+    persistence_id     varchar(255) NOT NULL,
+    sequence_number    int8         NOT NULL,
+    deleted            bool         NOT NULL DEFAULT false,
+    writer             varchar(255) NOT NULL,
+    write_timestamp    int8         NULL,
+    adapter_manifest   varchar(255) NULL,
+    event_ser_id       int4         NOT NULL,
+    event_ser_manifest varchar(255) NOT NULL,
+    event_payload      bytea        NOT NULL,
+    meta_ser_id        int4         NULL,
+    meta_ser_manifest  varchar(255) NULL,
+    meta_payload       bytea        NULL,
+    CONSTRAINT event_journal_pkey PRIMARY KEY (persistence_id, sequence_number)
+);
+CREATE UNIQUE INDEX event_journal_ordering_idx ON database_streamer.event_journal USING btree (ordering);
+
+
+CREATE TABLE database_streamer."snapshot"
+(
+    persistence_id        varchar(255) NOT NULL,
+    sequence_number       int8         NOT NULL,
+    created               int8         NOT NULL,
+    snapshot_ser_id       int4         NOT NULL,
+    snapshot_ser_manifest varchar(255) NOT NULL,
+    snapshot_payload      bytea        NOT NULL,
+    meta_ser_id           int4         NULL,
+    meta_ser_manifest     varchar(255) NULL,
+    meta_payload          bytea        NULL,
+    CONSTRAINT snapshot_pkey PRIMARY KEY (persistence_id, sequence_number)
+);
+
 CREATE SEQUENCE database_streamer.sq_events
     INCREMENT BY 1
     MINVALUE 1
@@ -25,29 +59,6 @@ CREATE TABLE database_streamer.streams
     delete        boolean NOT NULL,
     insert        boolean NOT NULL,
     update        boolean NOT NULL
-);
-
-DROP TABLE IF EXISTS database_streamer.journal;
-CREATE TABLE IF NOT EXISTS database_streamer.journal
-(
-    ordering        BIGSERIAL,
-    persistence_id  VARCHAR(255)               NOT NULL,
-    sequence_number BIGINT                     NOT NULL,
-    deleted         BOOLEAN      DEFAULT FALSE NOT NULL,
-    tags            VARCHAR(255) DEFAULT NULL,
-    message         BYTEA                      NOT NULL,
-    PRIMARY KEY (persistence_id, sequence_number)
-);
-CREATE UNIQUE INDEX journal_ordering_idx ON database_streamer.journal (ordering);
-
-DROP TABLE IF EXISTS database_streamer.snapshot;
-CREATE TABLE IF NOT EXISTS database_streamer.snapshot
-(
-    persistence_id  VARCHAR(255) NOT NULL,
-    sequence_number BIGINT       NOT NULL,
-    created         BIGINT       NOT NULL,
-    snapshot        BYTEA        NOT NULL,
-    PRIMARY KEY (persistence_id, sequence_number)
 );
 
 

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/dto/db_stream.dart';
 import 'package:frontend/screens/add_update_stream.dart';
@@ -14,7 +15,6 @@ class DbStreamList extends StatefulWidget {
 }
 
 class _DbStreamListState extends State<DbStreamList> {
-
   DbStreamService _streamsService = Services.get<DbStreamService>(DbStreamService);
 
   @override
@@ -44,7 +44,7 @@ class _DbStreamListState extends State<DbStreamList> {
                           break;
                         case 2:
                           _streamsService.delete(dbStream);
-                         break;
+                          break;
                       }
                     },
                     child: Icon(Icons.more_vert),
@@ -57,6 +57,38 @@ class _DbStreamListState extends State<DbStreamList> {
                         value: 2,
                         child: Text("Delete"),
                       )
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text("Events: "),
+                      ...dbStream.insert ? [Text("Insert"), Text("  |  ")] : [],
+                      ...dbStream.update ? [Text("Update"), Text("  |  ")] : [],
+                      ...dbStream.delete ? [Text("Delete")] : [],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [Text("Table: "), Text(dbStream.schema), Text("."), Text(dbStream.table)],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text("Topic: "),
+                      Text(dbStream.topic),
                     ],
                   ),
                 ),

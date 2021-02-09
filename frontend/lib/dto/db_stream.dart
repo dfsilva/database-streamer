@@ -43,7 +43,7 @@ class DbStream {
           bool insert,
           bool update}) =>
       DbStream(
-        title: this.title,
+        title: title ?? this.title,
         description: description ?? this.description,
         table: table ?? this.table,
         schema: schema ?? this.schema,
