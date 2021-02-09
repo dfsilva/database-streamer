@@ -24,3 +24,10 @@ class SetDbStream {
 
   SetDbStream(this.dbStream);
 }
+
+@immutable
+class RemoveDbStream {
+  final DbStream dbStream;
+
+  RemoveDbStream(this.dbStream);
+}

@@ -8,7 +8,7 @@ class DbStream {
   final bool insert;
   final bool update;
 
-  const DbStream({this.title, this.description, this.table, this.schema, this.topic, this.delete, this.insert, this.update});
+  const DbStream({this.title, this.description, this.table, this.schema, this.topic, this.delete = true, this.insert = true, this.update = true});
 
   static DbStream fromJson(Map<String, Object> json) {
     return DbStream(

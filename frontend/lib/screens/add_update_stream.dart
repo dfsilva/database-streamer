@@ -124,22 +124,6 @@ class _AddUpdateStreamState extends State<AddUpdateStream> {
                       child: Row(
                         children: [
                           Switch(
-                            value: this._dbStream.delete,
-                            onChanged: (value) {
-                              setState(() {
-                                this._dbStream = this._dbStream.copyWith(delete: value);
-                              });
-                            },
-                          ),
-                          Text("delete")
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: Row(
-                        children: [
-                          Switch(
                             value: this._dbStream.insert,
                             onChanged: (value) {
                               setState(() {
@@ -147,7 +131,7 @@ class _AddUpdateStreamState extends State<AddUpdateStream> {
                               });
                             },
                           ),
-                          Text("delete")
+                          Text("insert")
                         ],
                       ),
                     ),
@@ -160,6 +144,22 @@ class _AddUpdateStreamState extends State<AddUpdateStream> {
                             onChanged: (value) {
                               setState(() {
                                 this._dbStream = this._dbStream.copyWith(update: value);
+                              });
+                            },
+                          ),
+                          Text("update")
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: Row(
+                        children: [
+                          Switch(
+                            value: this._dbStream.delete,
+                            onChanged: (value) {
+                              setState(() {
+                                this._dbStream = this._dbStream.copyWith(delete: value);
                               });
                             },
                           ),
@@ -178,7 +178,11 @@ class _AddUpdateStreamState extends State<AddUpdateStream> {
                   if (_formKey.currentState.validate()) {
                     _formKey.currentState.save();
                   }
-                  _dbStreamService.add(this._dbStream).then((value) => Navigator.of(context).pop());
+                  if(widget.dbStream.topic != null){
+                    _dbStreamService.update(this._dbStream).then((value) => Navigator.of(context).pop());
+                  }else{
+                    _dbStreamService.add(this._dbStream).then((value) => Navigator.of(context).pop());
+                  }
                 }),
           )
         ],

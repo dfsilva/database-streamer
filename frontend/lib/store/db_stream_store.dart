@@ -10,12 +10,17 @@ abstract class _DbStreamStore with Store {
   ObservableMap<String, DbStream> dbStreams = Map<String, DbStream>().asObservable();
 
   @action
-  setAgents(List<DbStream> dbStreams) {
+  setStreams(List<DbStream> dbStreams) {
     this.dbStreams = Map<String, DbStream>.fromIterable(dbStreams, key: (p) => p.topic, value: (p) => p).asObservable();
   }
 
   @action
-  setAgent(DbStream dbStream) {
+  setStream(DbStream dbStream) {
     this.dbStreams[dbStream.topic] = dbStream;
+  }
+
+  @action
+  removeStream(DbStream dbStream) {
+    this.dbStreams = dbStreams..remove(dbStream.topic);
   }
 }

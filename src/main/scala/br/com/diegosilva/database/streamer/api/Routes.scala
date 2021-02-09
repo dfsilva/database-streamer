@@ -32,7 +32,7 @@ class Routes() extends FailFastCirceSupport {
     case ex =>
       extractUri { uri =>
         log.error(ex.getMessage, ex)
-        complete(HttpResponse(InternalServerError, entity = s"Ocorreu algum erro inesperado: ${ex.getMessage} ao acessar a uri: $uri"))
+        complete(HttpResponse(InternalServerError, entity = s"Houston, we have a problem: ${ex.getMessage} ao acessar a uri: $uri"))
       }
   }
 
@@ -54,7 +54,35 @@ class Routes() extends FailFastCirceSupport {
                       val con = dataSource.getConnection
                       val action = for {
                         _ <- TriggersRepo.create(data.schema, data.table, data.topic, data.delete, data.insert, data.update, con)
-                        dbStream <- db.run(DbStreamRepo.add(DbStream(title = data.title, description = data.description, table = data.table, topic = data.topic, schema = data.schema)))
+                        dbStream <- db.run(DbStreamRepo.add(DbStream(
+                          title = data.title,
+                          description = data.description,
+                          table = data.table,
+                          topic = data.topic,
+                          schema = data.schema,
+                          insert = data.insert,
+                          update = data.update,
+                          delete = data.delete)))
+                      } yield dbStream
+                      complete(action)
+                    }
+                  },
+
+                  put {
+                    entity(as[AddTableStream]) { data =>
+                      val action = for {
+                        _ <- TriggersRepo.delete(data.schema, data.topic, data.topic, dataSource.getConnection)
+                        _ <- db.run(DbStreamRepo.delete(data.topic))
+                        _ <- TriggersRepo.create(data.schema, data.table, data.topic, data.delete, data.insert, data.update, dataSource.getConnection)
+                        dbStream <- db.run(DbStreamRepo.add(DbStream(
+                          title = data.title,
+                          description = data.description,
+                          table = data.table,
+                          topic = data.topic,
+                          schema = data.schema,
+                          insert = data.insert,
+                          update = data.update,
+                          delete = data.delete)))
                       } yield dbStream
                       complete(action)
                     }

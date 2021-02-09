@@ -24,23 +24,37 @@ mixin _$DbStreamStore on _DbStreamStore, Store {
     });
   }
 
-  final _$_DbStreamStoreActionController = ActionController(name: '_DbStreamStore');
+  final _$_DbStreamStoreActionController =
+      ActionController(name: '_DbStreamStore');
 
   @override
-  dynamic setAgents(List<DbStream> dbStreams) {
-    final _$actionInfo = _$_DbStreamStoreActionController.startAction(name: '_DbStreamStore.setAgents');
+  dynamic setStreams(List<DbStream> dbStreams) {
+    final _$actionInfo = _$_DbStreamStoreActionController.startAction(
+        name: '_DbStreamStore.setStreams');
     try {
-      return super.setAgents(dbStreams);
+      return super.setStreams(dbStreams);
     } finally {
       _$_DbStreamStoreActionController.endAction(_$actionInfo);
     }
   }
 
   @override
-  dynamic setAgent(DbStream dbStream) {
-    final _$actionInfo = _$_DbStreamStoreActionController.startAction(name: '_DbStreamStore.setAgent');
+  dynamic setStream(DbStream dbStream) {
+    final _$actionInfo = _$_DbStreamStoreActionController.startAction(
+        name: '_DbStreamStore.setStream');
     try {
-      return super.setAgent(dbStream);
+      return super.setStream(dbStream);
+    } finally {
+      _$_DbStreamStoreActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  dynamic removeStream(DbStream dbStream) {
+    final _$actionInfo = _$_DbStreamStoreActionController.startAction(
+        name: '_DbStreamStore.removeStream');
+    try {
+      return super.removeStream(dbStream);
     } finally {
       _$_DbStreamStoreActionController.endAction(_$actionInfo);
     }

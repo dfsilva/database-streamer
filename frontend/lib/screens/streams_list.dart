@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/dto/db_stream.dart';
-import 'package:frontend/screens/add_stream.dart';
+import 'package:frontend/screens/add_update_stream.dart';
+import 'package:frontend/service/db_stream_service.dart';
+import 'package:frontend/service/service_locator.dart';
 
 class DbStreamList extends StatefulWidget {
   final List<DbStream> dbStreams;
@@ -12,6 +14,9 @@ class DbStreamList extends StatefulWidget {
 }
 
 class _DbStreamListState extends State<DbStreamList> {
+
+  DbStreamService _streamsService = Services.get<DbStreamService>(DbStreamService);
+
   @override
   Widget build(BuildContext context) {
     if (widget.dbStreams.isEmpty) {
@@ -38,6 +43,7 @@ class _DbStreamListState extends State<DbStreamList> {
                               .push(MaterialPageRoute(builder: (__) => AddUpdateStream(dbStream: dbStream)));
                           break;
                         case 2:
+                          _streamsService.delete(dbStream);
                          break;
                       }
                     },
@@ -45,11 +51,11 @@ class _DbStreamListState extends State<DbStreamList> {
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 1,
-                        child: Text("Alterar"),
+                        child: Text("Change"),
                       ),
                       PopupMenuItem(
                         value: 2,
-                        child: Text("Excluir"),
+                        child: Text("Delete"),
                       )
                     ],
                   ),

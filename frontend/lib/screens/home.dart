@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:frontend/dto/db_stream.dart';
-import 'package:frontend/screens/add_stream.dart';
+import 'package:frontend/screens/add_update_stream.dart';
 import 'package:frontend/screens/streams_list.dart';
 import 'package:frontend/service/db_stream_service.dart';
 import 'package:frontend/service/service_locator.dart';
@@ -12,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  DbStreamService _processorService = Services.get<DbStreamService>(DbStreamService);
+  DbStreamService _streamsService = Services.get<DbStreamService>(DbStreamService);
 
   @override
   void initState() {
@@ -28,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: Text("Table Streams")),
         body: FutureBuilder(
-          future: _processorService.dbStreams(),
+          future: _streamsService.dbStreams(),
           builder: (_, AsyncSnapshot<List<DbStream>> snp) {
             if (snp.hasError) {
               return Center(
@@ -42,7 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }
 
-            return DbStreamList(dbStreams: snp.data);
+            return Observer(builder: (_) {
+              List<DbStream> _streams = _streamsService.store().dbStreams.values.toList();
+              return DbStreamList(dbStreams: _streams);
+            });
           },
         ),
         floatingActionButton: FloatingActionButton(
