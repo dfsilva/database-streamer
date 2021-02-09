@@ -1,19 +1,18 @@
-import 'package:code_editor/code_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/dto/db_stream.dart';
 import 'package:frontend/service/db_stream_service.dart';
 import 'package:frontend/service/service_locator.dart';
 
-class AddAgentScreen extends StatefulWidget {
+class AddUpdateStream extends StatefulWidget {
   final DbStream dbStream;
 
-  AddAgentScreen({Key key, this.dbStream}) : super(key: key);
+  AddUpdateStream({Key key, this.dbStream = const DbStream()}) : super(key: key);
 
   @override
-  _AddAgentScreenState createState() => _AddAgentScreenState();
+  _AddUpdateStreamState createState() => _AddUpdateStreamState();
 }
 
-class _AddAgentScreenState extends State<AddAgentScreen> {
+class _AddUpdateStreamState extends State<AddUpdateStream> {
   DbStreamService _dbStreamService = Services.get<DbStreamService>(DbStreamService);
 
   final _formKey = GlobalKey<FormState>();
@@ -22,6 +21,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
   @override
   void initState() {
     super.initState();
+    _dbStream = widget.dbStream;
   }
 
   @override
@@ -70,124 +70,115 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: TextFormField(
+                        keyboardType: TextInputType.text,
+                        initialValue: _dbStream.table,
+                        validator: (from) {
+                          if (from.isEmpty) {
+                            return "Please inform the table";
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          this._dbStream = this._dbStream.copyWith(table: value);
+                        },
+                        decoration: InputDecoration(hintText: "table", labelText: "table"),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: TextFormField(
+                        keyboardType: TextInputType.text,
+                        initialValue: _dbStream.schema,
+                        validator: (from) {
+                          if (from.isEmpty) {
+                            return "Please inform the schema";
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          this._dbStream = this._dbStream.copyWith(schema: value);
+                        },
+                        decoration: InputDecoration(hintText: "schema", labelText: "schema"),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: TextFormField(
+                        keyboardType: TextInputType.text,
+                        initialValue: _dbStream.topic,
+                        validator: (from) {
+                          if (from.isEmpty) {
+                            return "Please inform the topic";
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          this._dbStream = this._dbStream.copyWith(topic: value);
+                        },
+                        decoration: InputDecoration(hintText: "topic", labelText: "topic"),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: Row(
                         children: [
                           Switch(
-                            value: this._dbStream.ordered,
+                            value: this._dbStream.delete,
                             onChanged: (value) {
                               setState(() {
-                                this._dbStream = this._dbStream.copyWith(ordered: value);
+                                this._dbStream = this._dbStream.copyWith(delete: value);
                               });
                             },
                           ),
-                          Text("ordered")
+                          Text("delete")
                         ],
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: DropdownButtonFormField(
-                          value: this._dbStream.agentType,
-                          items: <DropdownMenuItem>[
-                            DropdownMenuItem(value: "D", child: Text("Default")),
-                            DropdownMenuItem(value: "C", child: Text("Conditional"))
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              this._dbStream = this._dbStream.copyWith(agentType: value);
-                            });
-                          },
-                          onSaved: (type) {
-                            this._dbStream = this._dbStream.copyWith(agentType: type);
-                          }),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: TextFormField(
-                        keyboardType: TextInputType.text,
-                        initialValue: _dbStream.from,
-                        validator: (from) {
-                          if (from.isEmpty) {
-                            return "Please inform the from topic";
-                          }
-                          return null;
-                        },
-                        onSaved: (from) {
-                          this._dbStream = this._dbStream.copyWith(from: from);
-                        },
-                        decoration: InputDecoration(hintText: "from topic", labelText: "from"),
+                      child: Row(
+                        children: [
+                          Switch(
+                            value: this._dbStream.insert,
+                            onChanged: (value) {
+                              setState(() {
+                                this._dbStream = this._dbStream.copyWith(insert: value);
+                              });
+                            },
+                          ),
+                          Text("delete")
+                        ],
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: TextFormField(
-                        keyboardType: TextInputType.text,
-                        autofocus: true,
-                        initialValue: _dbStream.to,
-                        onSaved: (to) {
-                          this._dbStream = this._dbStream.copyWith(to: to);
-                        },
-                        decoration: InputDecoration(hintText: "destiny topic 0", labelText: "topic0"),
+                      child: Row(
+                        children: [
+                          Switch(
+                            value: this._dbStream.update,
+                            onChanged: (value) {
+                              setState(() {
+                                this._dbStream = this._dbStream.copyWith(update: value);
+                              });
+                            },
+                          ),
+                          Text("delete")
+                        ],
                       ),
                     ),
-                    (_dbStream.agentType == "C")
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                            child: TextFormField(
-                              keyboardType: TextInputType.text,
-                              autofocus: true,
-                              initialValue: _dbStream.to2,
-                              onSaved: (to2) {
-                                this._dbStream = this._dbStream.copyWith(to2: to2);
-                              },
-                              decoration: InputDecoration(hintText: "destiny topic 1", labelText: "topic1"),
-                            ),
-                          )
-                        : SizedBox.shrink(),
-                    (_dbStream.agentType == "C")
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                            child: CodeEditor(
-                                model: EditorModel(
-                                  files: [FileEditor(name: "Conditional Script", language: "java", code: _dbStream.ifscript)],
-                                  styleOptions: new EditorModelStyleOptions(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                disableNavigationbar: false,
-                                onSubmit: (String language, String value) {
-                                  this._dbStream = this._dbStream.copyWith(ifscript: value);
-                                }),
-                          )
-                        : SizedBox.shrink(),
-                    Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                        child: CodeEditor(
-                            model: EditorModel(
-                              files: [FileEditor(name: "Data Script", language: "java", code: _dbStream.dataScript)],
-                              styleOptions: new EditorModelStyleOptions(
-                                fontSize: 13,
-                              ),
-                            ),
-                            disableNavigationbar: false,
-                            onSubmit: (String language, String value) {
-                              this._dbStream = this._dbStream.copyWith(dataScript: value);
-                            })),
                   ],
                 )),
           ),
-
-
           Padding(
             padding: const EdgeInsets.only(bottom: 20, top: 10),
-            child: RaisedButton(
+            child: ElevatedButton(
                 child: Text("Save"),
                 onPressed: () {
                   if (_formKey.currentState.validate()) {
                     _formKey.currentState.save();
                   }
-
-                  // _processorService.addOrUpdate(this._dbStream).then((value) => Navigator.of(context).pop());
+                  _dbStreamService.add(this._dbStream).then((value) => Navigator.of(context).pop());
                 }),
           )
         ],

@@ -24,13 +24,11 @@ mixin _$DbStreamStore on _DbStreamStore, Store {
     });
   }
 
-  final _$_DbStreamStoreActionController =
-      ActionController(name: '_DbStreamStore');
+  final _$_DbStreamStoreActionController = ActionController(name: '_DbStreamStore');
 
   @override
   dynamic setAgents(List<DbStream> dbStreams) {
-    final _$actionInfo = _$_DbStreamStoreActionController.startAction(
-        name: '_DbStreamStore.setAgents');
+    final _$actionInfo = _$_DbStreamStoreActionController.startAction(name: '_DbStreamStore.setAgents');
     try {
       return super.setAgents(dbStreams);
     } finally {
@@ -40,8 +38,7 @@ mixin _$DbStreamStore on _DbStreamStore, Store {
 
   @override
   dynamic setAgent(DbStream dbStream) {
-    final _$actionInfo = _$_DbStreamStoreActionController.startAction(
-        name: '_DbStreamStore.setAgent');
+    final _$actionInfo = _$_DbStreamStoreActionController.startAction(name: '_DbStreamStore.setAgent');
     try {
       return super.setAgent(dbStream);
     } finally {

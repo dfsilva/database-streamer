@@ -25,7 +25,7 @@ class DbStreamService extends BaseService<DbStreamStore> {
         .whenComplete(() => bus().send(HideHud()));
   }
 
-  Future<List<DbStream>> processedMessages() {
+  Future<List<DbStream>> dbStreams() {
     return Api.doGet(uri: "/streams").then((value) => (value as Iterable).map((e) => DbStream.fromJson(e)).toList());
   }
 

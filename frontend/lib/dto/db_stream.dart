@@ -8,7 +8,7 @@ class DbStream {
   final bool insert;
   final bool update;
 
-  DbStream({this.title, this.description, this.table, this.schema, this.topic, this.delete, this.insert, this.update});
+  const DbStream({this.title, this.description, this.table, this.schema, this.topic, this.delete, this.insert, this.update});
 
   static DbStream fromJson(Map<String, Object> json) {
     return DbStream(
@@ -32,4 +32,24 @@ class DbStream {
         "insert": this.insert,
         "update": this.update
       };
+
+  DbStream copyWith(
+          {String title,
+          String description,
+          String table,
+          String schema,
+          String topic,
+          bool delete,
+          bool insert,
+          bool update}) =>
+      DbStream(
+        title: this.title,
+        description: description ?? this.description,
+        table: table ?? this.table,
+        schema: schema ?? this.schema,
+        topic: topic ?? this.topic,
+        delete: delete != null ? delete : this.delete,
+        insert: insert != null ? insert : this.insert,
+        update: update != null ? update : this.update,
+      );
 }

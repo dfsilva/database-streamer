@@ -6,7 +6,6 @@ part 'db_stream_store.g.dart';
 class DbStreamStore = _DbStreamStore with _$DbStreamStore;
 
 abstract class _DbStreamStore with Store {
-
   @observable
   ObservableMap<String, DbStream> dbStreams = Map<String, DbStream>().asObservable();
 

@@ -43,8 +43,7 @@ mixin _$HudStore on _HudStore, Store {
 
   @override
   dynamic showHud(String text) {
-    final _$actionInfo =
-        _$_HudStoreActionController.startAction(name: '_HudStore.showHud');
+    final _$actionInfo = _$_HudStoreActionController.startAction(name: '_HudStore.showHud');
     try {
       return super.showHud(text);
     } finally {
@@ -54,8 +53,7 @@ mixin _$HudStore on _HudStore, Store {
 
   @override
   dynamic hideHud() {
-    final _$actionInfo =
-        _$_HudStoreActionController.startAction(name: '_HudStore.hideHud');
+    final _$actionInfo = _$_HudStoreActionController.startAction(name: '_HudStore.hideHud');
     try {
       return super.hideHud();
     } finally {

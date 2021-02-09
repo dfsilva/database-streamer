@@ -46,8 +46,7 @@ showConfirm({BuildContext context, String text, Function onCancel, Function onCo
             },
           ),
           FlatButton(
-            child:
-            Text("Confirmar", style: Theme.of(context).textTheme.button.copyWith(color: Colors.green)),
+            child: Text("Confirmar", style: Theme.of(context).textTheme.button.copyWith(color: Colors.green)),
             onPressed: () {
               Navigator.of(context).pop();
               onConfirm();
