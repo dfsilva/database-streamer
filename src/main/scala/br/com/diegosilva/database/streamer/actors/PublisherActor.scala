@@ -30,7 +30,7 @@ object PublisherActor {
 
   sealed trait Command extends CborSerializable
 
-  final case class AddToProcess(message: DatabaseNotification) extends Command
+  final case class AddToProcess(message: DatabaseNotification, replyTo: ActorRef[Command]) extends Command
 
   final case class AddedSucessfull(message: DatabaseNotification) extends Command
 
@@ -81,11 +81,12 @@ object PublisherActor {
   private def handlerCommands(id: String, state: State, command: Command,
                               context: ActorContext[Command]): Effect[Event, State] = {
     command match {
-      case AddToProcess(message) => {
+      case AddToProcess(message, replyTo) => {
         log.info(s"Adding message to process {}", id)
         Effect.persist(AddedToProcess(message))
-          .thenReply(context.self)(updated => {
-            ProcessMessages()
+          .thenReply(replyTo)(updated => {
+            context.self ! ProcessMessages()
+            AddedSucessfull(message)
           })
       }
 

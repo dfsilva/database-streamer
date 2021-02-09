@@ -54,8 +54,8 @@ class Routes() extends FailFastCirceSupport {
                       val con = dataSource.getConnection
                       val action = for {
                         _ <- TriggersRepo.create(data.schema, data.table, data.topic, data.delete, data.insert, data.update, con)
-                        _ <- db.run(DbStreamRepo.add(DbStream(title = data.title, description = data.description, table = data.table, topic = data.topic, schema = data.schema)))
-                      } yield ("ok")
+                        dbStream <- db.run(DbStreamRepo.add(DbStream(title = data.title, description = data.description, table = data.table, topic = data.topic, schema = data.schema)))
+                      } yield dbStream
                       complete(action)
                     }
                   },

@@ -1,7 +1,9 @@
 package br.com.diegosilva.database.streamer.repo
 
+import br.com.diegosilva.database.streamer.repo.DbStreamRepo.table
 import br.com.diegosilva.database.streamer.repo.PostgresProfile.api._
 import slick.lifted.ProvenShape
+
 import java.sql.Timestamp
 
 case class Event(id: Option[Long],
@@ -31,6 +33,10 @@ object EventsTableRepo {
 
   def add(event: Event): DBIO[Event] = {
     table returning table += event
+  }
+
+  def delete(id: Long): DBIO[Int] = {
+    table.filter(_.id === id).delete
   }
 
 }
