@@ -9,7 +9,7 @@ class Api {
   static getApiUrl() {
     print("${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api");
     // return "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api";
-    return "http://localhost:8081/api";
+    return "http://192.168.31.39:8081/api";
   }
 
   static handleError(error) {

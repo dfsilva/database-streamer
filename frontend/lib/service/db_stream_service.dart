@@ -47,7 +47,8 @@ class DbStreamService extends BaseService<DbStreamStore> {
     if (msg is SetDbStream) {
       store().setStream(msg.dbStream);
     }
-
-    if (msg is RemoveDbStream) {}
+    if (msg is RemoveDbStream) {
+      store().removeStream(msg.dbStream);
+    }
   }
 }
