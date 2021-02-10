@@ -33,7 +33,7 @@ object ListenerActor {
     Behaviors.setup { context =>
       Behaviors.receiveMessage[ListenerActor.Command] {
         case StartListener =>
-          context.log.info(s"Start Listener....")
+          context.log.info(s"Starting Listener....")
           val connection = datasource.getConnection()
           val statement = connection.createStatement()
           statement.execute("LISTEN events_notify")
