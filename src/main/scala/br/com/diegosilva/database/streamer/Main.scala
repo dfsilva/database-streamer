@@ -6,7 +6,8 @@ import akka.actor.{Address, AddressFromURIString}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.typed.{Cluster, JoinSeedNodes}
 import akka.util.Timeout
-import br.com.diegosilva.database.streamer.actors.{ListenerActor, PublisherActor}
+import br.com.diegosilva.database.streamer.actors.ListenerActor.Start
+import br.com.diegosilva.database.streamer.actors.{ListenerActor, PublisherActor, ResendActor}
 import br.com.diegosilva.database.streamer.api.{Routes, Server}
 import br.com.diegosilva.database.streamer.db.DbExtension
 import br.com.diegosilva.database.streamer.repo.DbStreamRepo
@@ -46,7 +47,7 @@ object Guardian {
 
       Server(Routes(), httpPort, context.system).start()
 
-      context.spawn(ListenerActor(DbExtension(context.system).dataSource()), "listener-actor") ! ListenerActor.StartListener
+      context.spawn(ResendActor(), "resend-actor")
 
       SpawnProtocol()
     }

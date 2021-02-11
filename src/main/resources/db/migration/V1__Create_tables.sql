@@ -44,7 +44,7 @@ CREATE TABLE database_streamer.events
 (
     id          SERIAL PRIMARY KEY,
     create_time TIMESTAMP NOT NULL,
-    topic       VARCHAR   NULL,
+    topic       VARCHAR   NOT NULL,
     old         TEXT      NULL,
     current     TEXT      NULL
 );
