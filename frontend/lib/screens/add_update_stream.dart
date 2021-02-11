@@ -72,27 +72,10 @@ class _AddUpdateStreamState extends State<AddUpdateStream> {
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: TextFormField(
                         keyboardType: TextInputType.text,
-                        initialValue: _dbStream.table,
-                        validator: (from) {
-                          if (from.isEmpty) {
-                            return "Please inform the table";
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          this._dbStream = this._dbStream.copyWith(table: value);
-                        },
-                        decoration: InputDecoration(hintText: "table", labelText: "table"),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: TextFormField(
-                        keyboardType: TextInputType.text,
                         initialValue: _dbStream.schema,
                         validator: (from) {
                           if (from.isEmpty) {
-                            return "Please inform the schema";
+                            return "Please provide schema";
                           }
                           return null;
                         },
@@ -102,6 +85,24 @@ class _AddUpdateStreamState extends State<AddUpdateStream> {
                         decoration: InputDecoration(hintText: "schema", labelText: "schema"),
                       ),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: TextFormField(
+                        keyboardType: TextInputType.text,
+                        initialValue: _dbStream.table,
+                        validator: (from) {
+                          if (from.isEmpty) {
+                            return "Please provide the table";
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          this._dbStream = this._dbStream.copyWith(table: value);
+                        },
+                        decoration: InputDecoration(hintText: "table", labelText: "table"),
+                      ),
+                    ),
+
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: TextFormField(

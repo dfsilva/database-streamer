@@ -98,7 +98,7 @@ class Routes() extends FailFastCirceSupport with CORSHandler {
                   put {
                     entity(as[AddTableStream]) { data =>
                       val action = for {
-                        _ <- TriggersRepo.delete(data.schema, data.topic, data.topic, dataSource.getConnection)
+                        _ <- TriggersRepo.delete(data.schema, data.topic, data.table, dataSource.getConnection)
                         _ <- db.run(DbStreamRepo.delete(data.topic))
                         _ <- TriggersRepo.create(data.schema, data.table, data.topic, data.delete, data.insert, data.update, dataSource.getConnection)
                         dbStream <- db.run(DbStreamRepo.add(DbStream(
