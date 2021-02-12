@@ -1,10 +1,11 @@
 package br.com.diegosilva.database.streamer.actors
 
+import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{Behavior, PostStop, PreRestart, SupervisorStrategy}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
+import akka.util.Timeout
 import br.com.diegosilva.database.streamer.CborSerializable
-import br.com.diegosilva.database.streamer.actors.PublisherActor.AddedSucessfull
+import PublisherActor.AddedSucessfull
 import br.com.diegosilva.database.streamer.db.DbExtension
 import br.com.diegosilva.database.streamer.repo.{Event, EventsTableRepo}
 import org.slf4j.LoggerFactory
@@ -16,86 +17,75 @@ import scala.util.{Failure, Success}
 
 object ResendActor {
 
-  import br.com.diegosilva.database.streamer.Main._
+  implicit val timeout = Timeout(10.seconds)
 
   private val log = LoggerFactory.getLogger(ResendActor.getClass)
 
   sealed trait Command extends CborSerializable
 
-  private case class PublisherResponse(databaseNotification: DatabaseNotification, exception: Option[Throwable] = None) extends Command
+  private case class PublisherResponse(databaseNotification: Seq[DatabaseNotification], exception: Option[Throwable] = None) extends Command
 
-  final case object Start extends Command
-
-  final case object Stop extends Command
+  final case class Start(listenerActor: ActorRef[ListenerActor.Command]) extends Command
 
   private case object ResendTimerKey
 
   def apply(): Behavior[ResendActor.Command] = Behaviors.supervise(behaviors())
     .onFailure(SupervisorStrategy.restart)
 
-  def behaviors(beforeEvents: Seq[Event] = Seq.empty): Behavior[ResendActor.Command] = {
-
+  def behaviors(actorRef: ActorRef[ListenerActor.Command] = null, beforeEvents: Seq[Event] = Seq.empty): Behavior[ResendActor.Command] = {
     log.info("behaviors beforeEvents Size: {}", beforeEvents.size)
-
     Behaviors.withTimers { timers =>
       Behaviors.setup { context =>
         val db: Database = DbExtension.get(context.system).db()
-
-        if (beforeEvents.isEmpty) {
-          log.debug("Scheduling Resend to 500 milliseconds")
-          timers.startSingleTimer(ResendTimerKey, Start, 500.milliseconds)
-        }
-
         Behaviors.receiveMessage[ResendActor.Command] {
-          case Start => {
+          case Start(listenerActor) => {
             log.debug("Resend Start event")
             timers.cancel(ResendTimerKey)
             if (beforeEvents.isEmpty) {
               log.debug("Size of beforeEvents {}", beforeEvents.size)
-              val pendingMessages = Await.result(db.run(EventsTableRepo.pendingMessages(1000)), 500.millis)
+              val pendingMessages = Await.result(db.run(EventsTableRepo.pendingMessages(1000)), 2.seconds)
               log.debug("Size of pending messages {}", pendingMessages.size)
               if (!pendingMessages.isEmpty) {
-                pendingMessages.foreach(event => {
-                  val entityRef = ClusterSharding(context.system).entityRefFor(PublisherActor.EntityKey, event.topic)
-                  val notification = DatabaseNotification(id = event.id.get,
-                    time = event.createTime.toString,
-                    topic = event.topic,
-                    old = event.old,
-                    current = event.current)
-                  context.ask(entityRef, PublisherActor.AddToProcess(notification, _)) {
-                    case Success(value: AddedSucessfull) => PublisherResponse(value.message)
-                    case Failure(exception) => PublisherResponse(notification, Some(exception))
-                  }
-                })
-                behaviors(pendingMessages)
+                val topic = pendingMessages(0).topic
+                val notifications = pendingMessages.filter(_.topic == topic).map(ev => DatabaseNotification(id = ev.id.get,
+                  time = ev.createTime.toString,
+                  topic = ev.topic,
+                  old = ev.old,
+                  current = ev.current))
+                val entityRef = ClusterSharding(context.system).entityRefFor(PublisherActor.EntityKey, topic)
+                context.ask(entityRef, PublisherActor.AddToProcess(notifications, _)) {
+                  case Success(value: AddedSucessfull) => PublisherResponse(value.message)
+                  case Failure(exception) => PublisherResponse(notifications, Some(exception))
+                }
+                behaviors(listenerActor, pendingMessages)
               } else {
                 log.debug("No pending messages anymore, starting listener actor")
-                context.system..spawn(ListenerActor(), "listener-actor") ! ListenerActor.Start
-                context.self ! Stop
+                listenerActor ! ListenerActor.Start
                 Behaviors.same
               }
             } else {
               Behaviors.same
             }
           }
-          case PublisherResponse(notification, exception) =>
-            if(exception.isEmpty){
-              Await.result(db.run(EventsTableRepo.delete(notification.id)), 500.milliseconds)
-            }else{
-              log.error("Error processing notification {} {}", notification.id, exception.get.getMessage)
+          case PublisherResponse(notifications, exception) =>
+            val ids:Seq[Long] = notifications.map(_.id)
+            if (exception.isEmpty) {
+              Await.result(db.run(EventsTableRepo.delete(ids)), 5.seconds)
+            } else {
+              log.error("Error processing notifications {} {}", notifications.map(_.id), exception.get.getMessage)
             }
-            val newEvents = beforeEvents.filter(ev => ev.id.get != notification.id)
+            val newEvents = beforeEvents.filter(ev => !ids.contains(ev.id.get))
             log.debug("New Events size {}", newEvents.size)
-            behaviors(newEvents)
-          case Stop =>
-            Behaviors.stopped
+            if(newEvents.isEmpty){
+              timers.startSingleTimer(ResendTimerKey, Start(actorRef), 1.seconds)
+            }
+            behaviors(actorRef, newEvents)
         }.receiveSignal {
           case (context, PostStop) =>
             context.log.info(s"Stoping Resend Actor...")
             Behaviors.stopped
           case (context, PreRestart) =>
             context.log.info(s"Restarting Resend Actor....")
-            context.self ! Start
             Behaviors.same
         }
       }

@@ -41,6 +41,10 @@ object EventsTableRepo {
     table.filter(_.id === id).delete
   }
 
+  def delete(ids: Seq[Long]): DBIO[Int] = {
+    table.filter(_.id inSet ids).delete
+  }
+
   def lastEvent(): DBIO[Option[Event]] = {
     sql"""select e.id, e.create_time, e.topic, e.old, e.current
       from events e order by id desc limit 1""".as[Event].headOption

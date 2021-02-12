@@ -1,7 +1,7 @@
 package br.com.diegosilva.database.streamer
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorSystem, Behavior, SpawnProtocol}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SpawnProtocol}
 import akka.actor.{Address, AddressFromURIString}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.typed.{Cluster, JoinSeedNodes}
@@ -47,7 +47,10 @@ object Guardian {
 
       Server(Routes(), httpPort, context.system).start()
 
-      context.spawn(ResendActor(), "resend-actor")
+      val resendActor:ActorRef[ResendActor.Command] = context.spawn(ResendActor(), "resend-actor")
+      val listenerActor:ActorRef[ListenerActor.Command] =  context.spawn(ListenerActor(resendActor), "listener-actor")
+
+      resendActor ! ResendActor.Start(listenerActor)
 
       SpawnProtocol()
     }
