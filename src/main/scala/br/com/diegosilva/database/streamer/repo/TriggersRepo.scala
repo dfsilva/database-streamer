@@ -75,10 +75,10 @@ object TriggersRepo {
     }
 
     s"""
-       |create trigger ${topic}_${table} after
+       |create CONSTRAINT trigger ${topic}_${table} after
        |    ${build.toString()}
        |    on
-       |        ${schema}.${table} for each row execute procedure database_streamer.notify_${topic}_$table();
+       |        ${schema}.${table} DEFERRABLE INITIALLY DEFERRED for each row execute procedure database_streamer.notify_${topic}_$table();
        |""".stripMargin
   }
 
