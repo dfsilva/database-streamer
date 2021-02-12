@@ -24,28 +24,27 @@ object PublisherActor {
 
   sealed trait Command extends CborSerializable
 
-  final case class AddToProcess(messages: Seq[DatabaseNotification], replyTo: ActorRef[Command]) extends Command
-
-  final case class AddSucessfull(message: Seq[DatabaseNotification]) extends Command
+  final case class AddToQueue(messages: Set[DatabaseNotification]) extends Command
 
   final case class ProcessMessage() extends Command
 
   def apply(): Behavior[Command] = Behaviors.supervise(behaviors())
-    .onFailure(SupervisorStrategy.restart)
+    .onFailure(SupervisorStrategy.restartWithBackoff(minBackoff = 5.seconds, maxBackoff = 60.seconds, randomFactor = .3))
 
-  def behaviors(processQueue: Queue[DatabaseNotification] = Queue.empty): Behavior[Command] = {
+  def behaviors(processQueue: Set[DatabaseNotification] = Set.empty): Behavior[Command] = {
+    log.debug(s"ProcessMessage, behaviors, size ${processQueue.size}")
     Behaviors.withTimers { timers =>
       Behaviors.setup { context =>
         val db: Database = DbExtension.get(context.system).db()
         Behaviors.receiveMessage[Command] {
-          case AddToProcess(messages, replyTo) => {
+          case AddToQueue(messages) => {
             timers.cancel(TimerKey)
-            replyTo ! AddSucessfull(messages)
             timers.startSingleTimer(TimerKey, ProcessMessage(), 2.seconds)
             behaviors(processQueue ++ messages)
           }
           case ProcessMessage() => {
-            log.debug(s"Processing queue size ${processQueue.length}")
+            log.debug(s"ProcessMessage, queuesize ${processQueue.size}")
+            timers.cancel(TimerKey)
             processQueue.headOption match {
               case Some(notification) => {
                 val natsMessage = NatsNotification(notification.old, notification.current).asJson.noSpaces
@@ -61,10 +60,11 @@ object PublisherActor {
           }
         }.receiveSignal {
           case (context, PostStop) =>
-            log.info(s"Stoping Processor...")
+            log.info(s"Stoping Publisher, size: ${processQueue.size}")
             Behaviors.same
           case (context, PreRestart) =>
-            context.log.info(s"Restarting processor....")
+            log.info(s"Restarting Publisher, size: ${processQueue.size}")
+            timers.startSingleTimer(TimerKey, AddToQueue(processQueue), 500.millis)
             Behaviors.same
         }
       }

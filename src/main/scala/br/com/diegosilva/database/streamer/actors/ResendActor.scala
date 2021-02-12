@@ -59,7 +59,7 @@ object ResendActor {
         }.receiveSignal {
           case (context, PostStop) =>
             context.log.info(s"Stoping Resend Actor...")
-            Behaviors.stopped
+            Behaviors.same
           case (context, PreRestart) =>
             context.log.info(s"Restarting Resend Actor....")
             Behaviors.same

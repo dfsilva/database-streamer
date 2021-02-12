@@ -26,8 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text("Table Streams")),
+  Widget build(BuildContext context) =>
+      Scaffold(
+        appBar: AppBar(title: Text("Streams")),
         body: FutureBuilder(
           future: _streamsService.dbStreams(),
           builder: (_, AsyncSnapshot<List<DbStream>> snp) {
@@ -44,7 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             return Observer(builder: (_) {
-              List<DbStream> _streams = _streamsService.store().dbStreams.values.toList();
+              List<DbStream> _streams = _streamsService
+                  .store()
+                  .dbStreams
+                  .values
+                  .toList();
               return DbStreamList(dbStreams: _streams);
             });
           },

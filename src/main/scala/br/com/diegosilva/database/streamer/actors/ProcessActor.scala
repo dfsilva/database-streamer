@@ -3,12 +3,7 @@ package br.com.diegosilva.database.streamer.actors
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
 import br.com.diegosilva.database.streamer.CborSerializable
-import br.com.diegosilva.database.streamer.actors.PublisherActor.AddSucessfull
-import br.com.diegosilva.database.streamer.repo.EventsTableRepo
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 
 object ProcessActor {
 
@@ -27,21 +22,15 @@ object ProcessActor {
   def behaviors(actors: Map[String, ActorRef[PublisherActor.Command]] = Map.empty): Behavior[ProcessActor.Command] = {
 
     Behaviors.setup { context =>
-      val publisherResponse: ActorRef[PublisherActor.Command] = context.messageAdapter(rsp => PublisherResponse(rsp))
       Behaviors.receiveMessage[Command] {
         case ProcessMessages(topic, messages) =>
           if (actors.contains(topic)) {
-            actors(topic) ! PublisherActor.AddToProcess(messages, publisherResponse)
+            actors(topic) ! PublisherActor.AddToQueue(messages.toSet)
             Behaviors.same
           } else {
             val publishActor: ActorRef[PublisherActor.Command] = context.spawn(PublisherActor(), s"actor-$topic")
-            publishActor ! PublisherActor.AddToProcess(messages, publisherResponse)
+            publishActor ! PublisherActor.AddToQueue(messages.toSet)
             behaviors(actors + (topic -> publishActor))
-          }
-        case messageResponse: PublisherResponse =>
-          messageResponse.response match {
-            case AddSucessfull(notifications) =>
-              Behaviors.same
           }
       }.receiveSignal {
         case (context, PostStop) =>
@@ -52,7 +41,5 @@ object ProcessActor {
           Behaviors.same
       }
     }
-
   }
-
 }
