@@ -1,6 +1,6 @@
 package br.com.diegosilva.database.streamer.actors
 
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed._
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.persistence.typed.PersistenceId
@@ -20,6 +20,8 @@ object PublisherActor {
 
   private val log = LoggerFactory.getLogger(PublisherActor.getClass)
 
+  private case object TimerKey
+
   object State {
     val empty = State(lastId = 0, processQueue = Queue())
   }
@@ -30,9 +32,9 @@ object PublisherActor {
 
   sealed trait Command extends CborSerializable
 
-  final case class AddToProcess(message: DatabaseNotification, replyTo: ActorRef[Command]) extends Command
+  final case class AddToProcess(message: Seq[DatabaseNotification], replyTo: ActorRef[Command]) extends Command
 
-  final case class AddedSucessfull(message: DatabaseNotification) extends Command
+  final case class AddedSucessfull(message: Seq[DatabaseNotification]) extends Command
 
   final case class ProcessMessages() extends Command
 
@@ -40,10 +42,9 @@ object PublisherActor {
 
   final case class ProcessMessage(message: DatabaseNotification) extends Command
 
-
   sealed trait Event extends CborSerializable
 
-  final case class AddedToProcess(msg: DatabaseNotification) extends Event
+  final case class AddedToProcess(msg: Seq[DatabaseNotification]) extends Event
 
   final case class ProcessedSuccess(msg: DatabaseNotification, natsKey: String) extends Event
 
@@ -59,33 +60,38 @@ object PublisherActor {
 
   def apply(id: String): Behavior[Command] = {
     log.info("Creating publisher Actor {}..........", id)
-    Behaviors.setup[Command] { context =>
-      EventSourcedBehavior[Command, Event, State](
-        PersistenceId("Publisher", id),
-        State.empty,
-        (state, command) => handlerCommands(id, state, command, context),
-        (state, event) => handlerEvent(state, event))
-        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 5, keepNSnapshots = 3))
-        .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
-        .receiveSignal {
-          case (context, PostStop) =>
-            log.info(s"Stoping publisher {}", id)
-            Behaviors.same
-          case (context, PreRestart) =>
-            log.info(s"Restarting Publisher {}", id)
-            Behaviors.same
-        }
+    Behaviors.withTimers { timers =>
+      Behaviors.setup[Command] { context =>
+        EventSourcedBehavior[Command, Event, State](
+          PersistenceId("Publisher", id),
+          State.empty,
+          (state, command) => handlerCommands(id, state, command, timers, context),
+          (state, event) => handlerEvent(state, event))
+          .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 1000, keepNSnapshots = 3))
+          .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
+          .receiveSignal {
+            case (context, PostStop) =>
+              log.info(s"Stoping publisher {}", id)
+              Behaviors.same
+            case (context, PreRestart) =>
+              log.info(s"Restarting Publisher {}", id)
+              Behaviors.same
+          }
+      }
     }
   }
 
   private def handlerCommands(id: String, state: State, command: Command,
+                              timer: TimerScheduler[Command],
                               context: ActorContext[Command]): Effect[Event, State] = {
+
     command match {
       case AddToProcess(message, replyTo) => {
+        timer.cancel(TimerKey)
         log.info(s"Adding message to process {}", id)
         Effect.persist(AddedToProcess(message))
           .thenReply(replyTo)(updated => {
-            context.self ! ProcessMessages()
+            timer.startSingleTimer(TimerKey, ProcessMessages(), 2.seconds)
             AddedSucessfull(message)
           })
       }
@@ -111,7 +117,7 @@ object PublisherActor {
 
   private def handlerEvent(state: State, event: Event): State = {
     event match {
-      case AddedToProcess(message) => state.copy(processQueue = state.processQueue :+ message)
+      case AddedToProcess(message) => state.copy(processQueue = state.processQueue ++ message)
       case ProcessedSuccess(message, natsKey) => state.copy(processQueue = state.processQueue.filter(_.id != message.id))
     }
   }
