@@ -1,9 +1,14 @@
 package br.com.diegosilva.database.streamer.actors
 
-import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed._
+import akka.actor.typed.scaladsl.Behaviors
 import br.com.diegosilva.database.streamer.CborSerializable
+import br.com.diegosilva.database.streamer.actors.PublisherActor.AddSucessfull
+import br.com.diegosilva.database.streamer.repo.EventsTableRepo
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 object ProcessActor {
 
@@ -11,21 +16,33 @@ object ProcessActor {
 
   sealed trait Command extends CborSerializable
 
-  final case class ProcessMessage(message: DatabaseNotification, replyTo: ActorRef[Command]) extends Command
+  final case class ProcessMessages(topic: String, message: Seq[DatabaseNotification]) extends Command
 
-  final case class AddedSucessfull(message: DatabaseNotification) extends Command
+  final case class PublisherResponse(response: PublisherActor.Command) extends Command
 
-  final case class ProcessMessages() extends Command
 
   def apply(): Behavior[ProcessActor.Command] = Behaviors.supervise(behaviors())
     .onFailure(SupervisorStrategy.restart)
 
-  def behaviors(): Behavior[ProcessActor.Command] = {
+  def behaviors(actors: Map[String, ActorRef[PublisherActor.Command]] = Map.empty): Behavior[ProcessActor.Command] = {
 
     Behaviors.setup { context =>
-      Behaviors.receiveMessage[ProcessActor.Command] {
-        case _ =>
-          Behaviors.same
+      val publisherResponse: ActorRef[PublisherActor.Command] = context.messageAdapter(rsp => PublisherResponse(rsp))
+      Behaviors.receiveMessage[Command] {
+        case ProcessMessages(topic, messages) =>
+          if (actors.contains(topic)) {
+            actors(topic) ! PublisherActor.AddToProcess(messages, publisherResponse)
+            Behaviors.same
+          } else {
+            val publishActor: ActorRef[PublisherActor.Command] = context.spawn(PublisherActor(), s"actor-$topic")
+            publishActor ! PublisherActor.AddToProcess(messages, publisherResponse)
+            behaviors(actors + (topic -> publishActor))
+          }
+        case messageResponse: PublisherResponse =>
+          messageResponse.response match {
+            case AddSucessfull(notifications) =>
+              Behaviors.same
+          }
       }.receiveSignal {
         case (context, PostStop) =>
           log.info(s"Stoping Processor...")

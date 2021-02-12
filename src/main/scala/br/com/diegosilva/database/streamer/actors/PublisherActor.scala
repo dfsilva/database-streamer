@@ -1,14 +1,14 @@
 package br.com.diegosilva.database.streamer.actors
 
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed._
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
-import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
+import akka.actor.typed.scaladsl.Behaviors
 import br.com.diegosilva.database.streamer.CborSerializable
+import br.com.diegosilva.database.streamer.db.DbExtension
 import br.com.diegosilva.database.streamer.nats.{NatsConnectionExtension, NatsPublisher}
+import br.com.diegosilva.database.streamer.repo.EventsTableRepo
 import io.circe.syntax.EncoderOps
 import org.slf4j.LoggerFactory
+import slick.jdbc.JdbcBackend.Database
 
 import scala.collection.immutable.Queue
 import scala.concurrent.Await
@@ -22,104 +22,52 @@ object PublisherActor {
 
   private case object TimerKey
 
-  object State {
-    val empty = State(lastId = 0, processQueue = Queue())
-  }
-
-  final case class State(lastId: Long,
-                         processQueue: Queue[DatabaseNotification]
-                        ) extends CborSerializable
-
   sealed trait Command extends CborSerializable
 
-  final case class AddToProcess(message: Seq[DatabaseNotification], replyTo: ActorRef[Command]) extends Command
+  final case class AddToProcess(messages: Seq[DatabaseNotification], replyTo: ActorRef[Command]) extends Command
 
-  final case class AddedSucessfull(message: Seq[DatabaseNotification]) extends Command
+  final case class AddSucessfull(message: Seq[DatabaseNotification]) extends Command
 
-  final case class ProcessMessages() extends Command
+  final case class ProcessMessage() extends Command
 
-  final case class WaitCommand() extends Command
+  def apply(): Behavior[Command] = Behaviors.supervise(behaviors())
+    .onFailure(SupervisorStrategy.restart)
 
-  final case class ProcessMessage(message: DatabaseNotification) extends Command
-
-  sealed trait Event extends CborSerializable
-
-  final case class AddedToProcess(msg: Seq[DatabaseNotification]) extends Event
-
-  final case class ProcessedSuccess(msg: DatabaseNotification, natsKey: String) extends Event
-
-  val EntityKey: EntityTypeKey[Command] = EntityTypeKey[Command]("Publisher")
-
-  def init(system: ActorSystem[_]): Unit = {
-    ClusterSharding(system).init(Entity(EntityKey) { entityContent =>
-      Behaviors
-        .supervise(PublisherActor(entityContent.entityId))
-        .onFailure[Exception](SupervisorStrategy.restart)
-    })
-  }
-
-  def apply(id: String): Behavior[Command] = {
-    log.info("Creating publisher Actor {}..........", id)
+  def behaviors(processQueue: Queue[DatabaseNotification] = Queue.empty): Behavior[Command] = {
     Behaviors.withTimers { timers =>
-      Behaviors.setup[Command] { context =>
-        EventSourcedBehavior[Command, Event, State](
-          PersistenceId("Publisher", id),
-          State.empty,
-          (state, command) => handlerCommands(id, state, command, timers, context),
-          (state, event) => handlerEvent(state, event))
-          .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 1000, keepNSnapshots = 3))
-          .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
-          .receiveSignal {
-            case (context, PostStop) =>
-              log.info(s"Stoping publisher {}", id)
-              Behaviors.same
-            case (context, PreRestart) =>
-              log.info(s"Restarting Publisher {}", id)
-              Behaviors.same
+      Behaviors.setup { context =>
+        val db: Database = DbExtension.get(context.system).db()
+        Behaviors.receiveMessage[Command] {
+          case AddToProcess(messages, replyTo) => {
+            timers.cancel(TimerKey)
+            replyTo ! AddSucessfull(messages)
+            timers.startSingleTimer(TimerKey, ProcessMessage(), 2.seconds)
+            behaviors(processQueue ++ messages)
           }
-      }
-    }
-  }
-
-  private def handlerCommands(id: String, state: State, command: Command,
-                              timer: TimerScheduler[Command],
-                              context: ActorContext[Command]): Effect[Event, State] = {
-
-    command match {
-      case AddToProcess(message, replyTo) => {
-        timer.cancel(TimerKey)
-        log.info(s"Adding message to process {}", id)
-        Effect.persist(AddedToProcess(message))
-          .thenReply(replyTo)(updated => {
-            timer.startSingleTimer(TimerKey, ProcessMessages(), 2.seconds)
-            AddedSucessfull(message)
-          })
-      }
-
-      case ProcessMessages() => {
-        log.info(s"Processsing messages {}", id)
-        log.info(s"waiting ${state.processQueue.length}")
-        state.processQueue.headOption match {
-          case Some(notification) => {
-            val natsMessage = NatsNotification(notification.old, notification.current).asJson.noSpaces
-            log.debug("Sending message {} to topic {}", natsMessage, notification.topic)
-            val natsKey = Await.result(NatsPublisher(NatsConnectionExtension.get(context.system).streamingConnection, notification.topic, natsMessage), 500.millis)
-            log.debug("Message sent {}", natsKey)
-            Effect.persist(ProcessedSuccess(notification, natsKey)).thenReply(context.self)(updated => {
-              ProcessMessages()
-            })
+          case ProcessMessage() => {
+            log.debug(s"Processing queue size ${processQueue.length}")
+            processQueue.headOption match {
+              case Some(notification) => {
+                val natsMessage = NatsNotification(notification.old, notification.current).asJson.noSpaces
+                log.debug("Sending message {} to topic {}", natsMessage, notification.topic)
+                val natsKey = Await.result(NatsPublisher(NatsConnectionExtension.get(context.system).streamingConnection, notification.topic, natsMessage), 500.millis)
+                log.debug("Message sent {}", natsKey)
+                timers.startSingleTimer(TimerKey, ProcessMessage(), 500.millis)
+                Await.result(db.run(EventsTableRepo.delete(notification.id)), 1.second)
+                behaviors(processQueue.tail)
+              }
+              case _ => behaviors(processQueue)
+            }
           }
-          case _ => Effect.none
+        }.receiveSignal {
+          case (context, PostStop) =>
+            log.info(s"Stoping Processor...")
+            Behaviors.same
+          case (context, PreRestart) =>
+            context.log.info(s"Restarting processor....")
+            Behaviors.same
         }
       }
     }
   }
-
-  private def handlerEvent(state: State, event: Event): State = {
-    event match {
-      case AddedToProcess(message) => state.copy(processQueue = state.processQueue ++ message)
-      case ProcessedSuccess(message, natsKey) => state.copy(processQueue = state.processQueue.filter(_.id != message.id))
-    }
-  }
-
 }

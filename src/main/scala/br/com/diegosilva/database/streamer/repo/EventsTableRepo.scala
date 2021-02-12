@@ -50,9 +50,9 @@ object EventsTableRepo {
       from events e order by id desc limit 1""".as[Event].headOption
   }
 
-  def pendingMessages(limit: Int): DBIO[Vector[Event]] = {
+  def pendingMessages(lastId:Long, limit: Int): DBIO[Vector[Event]] = {
     sql"""select e.id, e.create_time, e.topic, e.old, e.current
-      from events e order by id asc limit $limit""".as[Event]
+      from events e where e.id > $lastId order by id asc limit $limit""".as[Event]
   }
 
 }

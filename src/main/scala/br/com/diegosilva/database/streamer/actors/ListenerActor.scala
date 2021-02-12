@@ -6,7 +6,7 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop, PreRestart, SupervisorStr
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.util.Timeout
 import br.com.diegosilva.database.streamer.CborSerializable
-import PublisherActor.AddedSucessfull
+import PublisherActor.AddSucessfull
 import br.com.diegosilva.database.streamer.actors.ResendActor.{ResendTimerKey, Start}
 import br.com.diegosilva.database.streamer.db.DbExtension
 import br.com.diegosilva.database.streamer.repo.EventsTableRepo
@@ -32,10 +32,10 @@ object ListenerActor {
 
   private case class PublisherResponse(databaseNotification: Seq[DatabaseNotification], exception: Option[Throwable] = None) extends Command
 
-  def apply(resendActor:ActorRef[ResendActor.Command]): Behavior[ListenerActor.Command] = Behaviors.supervise(behaviors(resendActor))
+  def apply(resendActor:ActorRef[ResendActor.Command], processActor: ActorRef[ProcessActor.Command]): Behavior[ListenerActor.Command] = Behaviors.supervise(behaviors(resendActor, processActor))
     .onFailure(SupervisorStrategy.restart)
 
-  def behaviors(resendActor:ActorRef[ResendActor.Command]): Behavior[ListenerActor.Command] = {
+  def behaviors(resendActor:ActorRef[ResendActor.Command], processActor: ActorRef[ProcessActor.Command]): Behavior[ListenerActor.Command] = {
     Behaviors.withTimers { timers =>
       Behaviors.setup { context =>
         val connection = DbExtension.get(context.system).ds.getConnection
@@ -43,8 +43,6 @@ object ListenerActor {
         statement.execute("LISTEN events_notify")
         statement.close()
         val pgconn = connection.unwrap(classOf[org.postgresql.PGConnection])
-        val db = DbExtension.get(context.system).db()
-
         Behaviors.receiveMessage[ListenerActor.Command] {
           case Start =>
             timers.cancel(StartTimerKey)
@@ -52,7 +50,6 @@ object ListenerActor {
 
             if (!pgNotifications.isEmpty) {
               log.debug("Received notifications: {}", pgNotifications.length)
-
               val natsNotifications: Seq[DatabaseNotification] = pgNotifications.map(pgNotification => decode[DatabaseNotification](pgNotification.getParameter)).map{
                 case Right(value) => Some(value)
                 case Left(_) => None
@@ -60,27 +57,15 @@ object ListenerActor {
                 .filter(_.isDefined).map(_.get)
 
               log.debug("Converted notifications: {}", natsNotifications.length)
-
-              val topic = natsNotifications(0).topic
-              val topicNotifications = natsNotifications.filter(_.topic == topic)
-              val entityRef = ClusterSharding(context.system).entityRefFor(PublisherActor.EntityKey, topic)
-
-              context.ask(entityRef, PublisherActor.AddToProcess(topicNotifications, _)) {
-                case Success(value: AddedSucessfull) => PublisherResponse(value.message)
-                case Failure(exception) => PublisherResponse(topicNotifications, Some(exception))
-              }
+              val topics:Map[String, Seq[DatabaseNotification]] = natsNotifications.groupBy(_.topic)
+              topics.foreach(map =>{
+                processActor ! ProcessActor.ProcessMessages(map._1, map._2)
+              })
+              timers.startSingleTimer(StartTimerKey, Start, 2.seconds)
             } else {
               log.debug("Scheduling Start Listener 2 seconds")
               timers.startSingleTimer(StartTimerKey, Start, 2.seconds)
             }
-            Behaviors.same
-          case PublisherResponse(notifications, exception) =>
-            val ids:Seq[Long] = notifications.map(_.id)
-            if (exception.isEmpty) {
-              Await.result(db.run(EventsTableRepo.delete(ids)), 2.seconds)
-            }
-            log.debug("Scheduling Start Listener 2 seconds")
-            timers.startSingleTimer(StartTimerKey, Start, 2.seconds)
             Behaviors.same
         }.receiveSignal {
           case (context, PostStop) =>
@@ -88,7 +73,7 @@ object ListenerActor {
             Behaviors.same
           case (context, PreRestart) =>
             context.log.info(s"Restarting Listener....")
-            resendActor ! ResendActor.Start(context.self)
+            resendActor ! ResendActor.Start(0, context.self)
             Behaviors.same
         }
       }
