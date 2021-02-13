@@ -18,7 +18,7 @@ CREATE TABLE database_streamer.event_journal
 CREATE UNIQUE INDEX event_journal_ordering_idx ON database_streamer.event_journal USING btree (ordering);
 
 
-CREATE TABLE database_streamer."snapshot"
+CREATE TABLE database_streamer.snapshot
 (
     persistence_id        varchar(255) NOT NULL,
     sequence_number       int8         NOT NULL,
