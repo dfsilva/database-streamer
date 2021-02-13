@@ -41,16 +41,17 @@ object TriggersRepo {
        |begin
        |    SELECT nextval('database_streamer.sq_events'::regclass),now(),'$topic',row_to_json(old),row_to_json(new) INTO eventsRow;
        |    INSERT INTO database_streamer.events(id,create_time,topic,old,current) values (eventsRow.*);
-       |    content := row_to_json(eventsRow)::text;
-       |    contentSize := octet_length(content);
-       |    if contentSize <= 8000 then
-       |        PERFORM pg_notify('events_notify', content);
-       |    end if;
        |    RETURN new;
        |END;
        |$$function$$;
        |""".stripMargin
   }
+
+  //       |    content := row_to_json(eventsRow)::text;
+  //       |    contentSize := octet_length(content);
+  //       |    if contentSize <= 8000 then
+  //       |        PERFORM pg_notify('events_notify', content);
+  //       |    end if;
 
   def getTriggerTemplate(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean): String = {
 

@@ -34,11 +34,10 @@ object Guardian {
       Server(Routes(), httpPort, context.system).start()
 
       val processActor: ActorRef[ProcessActor.Command] = context.spawn(ProcessActor(), "process-actor")
-
       val resendActor: ActorRef[ResendActor.Command] = context.spawn(ResendActor(processActor), "resend-actor")
-      val listenerActor: ActorRef[ListenerActor.Command] = context.spawn(ListenerActor(resendActor, processActor), "listener-actor")
+//      val listenerActor: ActorRef[ListenerActor.Command] = context.spawn(ListenerActor(resendActor, processActor), "listener-actor")
 
-      resendActor ! ResendActor.Start(0, listenerActor)
+      resendActor ! ResendActor.Start(0)
 
       SpawnProtocol()
     }

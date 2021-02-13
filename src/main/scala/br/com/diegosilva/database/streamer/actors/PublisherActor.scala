@@ -51,8 +51,8 @@ object PublisherActor {
                 log.debug("Sending message {} to topic {}", natsMessage, notification.topic)
                 val natsKey = Await.result(NatsPublisher(NatsConnectionExtension.get(context.system).streamingConnection, notification.topic, natsMessage), 500.millis)
                 log.debug("Message sent {}", natsKey)
-                timers.startSingleTimer(TimerKey, ProcessMessage(), 500.millis)
                 Await.result(db.run(EventsTableRepo.delete(notification.id)), 1.second)
+                timers.startSingleTimer(TimerKey, ProcessMessage(), 50.millis)
                 behaviors(processQueue.tail)
               }
               case _ => behaviors(processQueue)

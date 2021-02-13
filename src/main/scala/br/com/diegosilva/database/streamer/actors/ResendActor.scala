@@ -22,7 +22,7 @@ object ResendActor {
 
   private case class PublisherResponse(databaseNotification: Seq[DatabaseNotification], exception: Option[Throwable] = None) extends Command
 
-  final case class Start(lastId: Long, listenerActor: ActorRef[ListenerActor.Command]) extends Command
+  final case class Start(lastId: Long) extends Command
 
   private case object ResendTimerKey
 
@@ -34,7 +34,7 @@ object ResendActor {
       Behaviors.setup { context =>
         val db: Database = DbExtension.get(context.system).db()
         Behaviors.receiveMessage[ResendActor.Command] {
-          case Start(lastId, listenerActor) => {
+          case Start(lastId) => {
             log.debug("Resend Start event")
             timers.cancel(ResendTimerKey)
             val pendingMessages = Await.result(db.run(EventsTableRepo.pendingMessages(lastId, 1000)), 2.seconds)
@@ -48,11 +48,11 @@ object ResendActor {
               topics.foreach(map => {
                 processActor ! ProcessActor.ProcessMessages(map._1, map._2)
               })
-              timers.startSingleTimer(ResendTimerKey, Start(pendingMessages.last.id.get, listenerActor), 2.seconds)
+              timers.startSingleTimer(ResendTimerKey, Start(pendingMessages.last.id.get), 2.seconds)
               Behaviors.same
             } else {
-              log.debug("No pending messages anymore, starting listener actor")
-              listenerActor ! ListenerActor.Start
+              log.debug("No messages to send")
+              timers.startSingleTimer(ResendTimerKey, Start(lastId), 2.seconds)
               Behaviors.same
             }
           }
