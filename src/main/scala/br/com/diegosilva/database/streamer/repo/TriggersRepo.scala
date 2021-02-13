@@ -1,36 +1,34 @@
 package br.com.diegosilva.database.streamer.repo
 
-import java.sql.Connection
-import scala.concurrent.{ExecutionContext, Future}
+import br.com.diegosilva.database.streamer.repo.PostgresProfile.api._
+import org.slf4j.LoggerFactory
+import slick.dbio.DBIO
 
 object TriggersRepo {
 
-  def create(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
-    Future {
-      try {
-        connection.createStatement().execute(getFunctionTemplate(table, topic))
-        connection.createStatement().execute(getTriggerTemplate(schema, table, topic, delete, insert, update))
-      } finally {
-        connection.close()
-      }
-    }
+  private val log = LoggerFactory.getLogger(TriggersRepo.getClass)
+
+
+  def createFunction(table: String, topic: String): DBIO[Int] = {
+    sqlu"#${functionCreateTemplate(table, topic)}"
   }
 
-
-  def delete(schema: String, topic: String, table: String, connection: Connection)(implicit ec: ExecutionContext): Future[Boolean] = {
-    Future {
-      try{
-        connection.createStatement().execute(getDropTrigger(schema, topic, table))
-        connection.createStatement().execute(getDropFunction(topic, table))
-      }finally {
-        connection.close()
-      }
-    }
+  def createTrigger(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean): DBIO[Int] = {
+    sqlu"#${triggerCreateTemplate(schema, table, topic, delete, insert, update)}"
   }
 
-  def getFunctionTemplate(table: String, topic: String): String = {
+  def dropTrigger(schema: String, topic: String, table: String): DBIO[Int] = {
+    sqlu"#${dropTriggerTemplate(schema, topic, table)}"
+  }
+
+  def dropFunction(topic: String, table: String): DBIO[Int] = {
+    sqlu"#${dropFunctionTemplate(topic, table)}"
+  }
+
+  private def functionCreateTemplate(table: String, topic: String): String = {
+    val functionName = s"${topic}_$table"
     s"""
-       |CREATE OR REPLACE FUNCTION database_streamer.notify_${topic}_$table()
+       |CREATE OR REPLACE FUNCTION database_streamer.notify_$functionName()
        |    RETURNS trigger
        |    LANGUAGE plpgsql
        |AS $$function$$
@@ -47,15 +45,10 @@ object TriggersRepo {
        |""".stripMargin
   }
 
-  //       |    content := row_to_json(eventsRow)::text;
-  //       |    contentSize := octet_length(content);
-  //       |    if contentSize <= 8000 then
-  //       |        PERFORM pg_notify('events_notify', content);
-  //       |    end if;
-
-  def getTriggerTemplate(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean): String = {
+  private def triggerCreateTemplate(schema: String, table: String, topic: String, delete: Boolean, insert: Boolean, update: Boolean): String = {
 
     val build = new StringBuilder("")
+    val triggerName = s"${topic}_$table"
 
     if (insert) {
       build.addAll("INSERT")
@@ -76,18 +69,20 @@ object TriggersRepo {
     }
 
     s"""
-       |create CONSTRAINT trigger ${topic}_${table} after
+       |create CONSTRAINT trigger $triggerName after
        |    ${build.toString()}
        |    on
-       |        ${schema}.${table} DEFERRABLE INITIALLY DEFERRED for each row execute procedure database_streamer.notify_${topic}_$table();
+       |        ${schema}.${table} DEFERRABLE INITIALLY DEFERRED for each row execute procedure database_streamer.notify_$triggerName();
        |""".stripMargin
   }
 
-  def getDropFunction(topic: String, table: String): String = {
-    s"drop function database_streamer.notify_${topic}_$table();"
+  def dropFunctionTemplate(topic: String, table: String): String = {
+    val name = s"${topic}_$table"
+    s"drop function database_streamer.notify_$name();"
   }
 
-  def getDropTrigger(schema: String, topic: String, table: String): String = {
-    s"drop trigger ${topic}_${table} on ${schema}.$table;"
+  def dropTriggerTemplate(schema: String, topic: String, table: String): String = {
+    val name = s"${topic}_$table"
+    s"drop trigger $name on ${schema}.$table;"
   }
 }

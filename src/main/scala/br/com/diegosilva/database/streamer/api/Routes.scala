@@ -1,21 +1,20 @@
 package br.com.diegosilva.database.streamer.api
 
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
-import akka.http.scaladsl.model.HttpMethods.{DELETE, GET, OPTIONS, POST, PUT}
+import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.StatusCodes.InternalServerError
 import akka.http.scaladsl.model.headers.{`Access-Control-Allow-Credentials`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Origin`}
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
-import akka.http.scaladsl.server.Directives.{complete, options, respondWithHeaders}
-import akka.http.scaladsl.server.{Directive0, Route}
+import akka.http.scaladsl.server.Directives.{complete, options, respondWithHeaders, _}
+import akka.http.scaladsl.server.{Directive0, Route, _}
 import br.com.diegosilva.database.streamer.db.DbExtension
+import br.com.diegosilva.database.streamer.repo.PostgresProfile.api._
 import br.com.diegosilva.database.streamer.repo.{DbStream, DbStreamRepo, TriggersRepo}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
+import slick.dbio.{DBIOAction, Effect, NoStream}
 
-import akka.http.scaladsl.server._
-import Directives._
-
-trait CORSHandler{
+trait CORSHandler {
 
   private val corsResponseHeaders = List(
     `Access-Control-Allow-Origin`.*,
@@ -37,7 +36,7 @@ trait CORSHandler{
     preflightRequestHandler ~ r
   }
 
-  def addCORSHeaders(response: HttpResponse):HttpResponse =
+  def addCORSHeaders(response: HttpResponse): HttpResponse =
     response.withHeaders(corsResponseHeaders)
 
 }
@@ -68,67 +67,70 @@ class Routes() extends FailFastCirceSupport with CORSHandler {
 
   val routes: Route = corsHandler(
     concat(
-        handleExceptions(errorHandler) {
-          pathPrefix("api") {
-            concat(
-              pathPrefix("streams") {
-                concat(
-                  get {
-                    complete(db.run(DbStreamRepo.list()))
-                  },
-                  post {
-                    entity(as[AddTableStream]) { data =>
-                      val con = dataSource.getConnection
-                      val action = for {
-                        _ <- TriggersRepo.create(data.schema, data.table, data.topic, data.delete, data.insert, data.update, con)
-                        dbStream <- db.run(DbStreamRepo.add(DbStream(
-                          title = data.title,
-                          description = data.description,
-                          table = data.table,
-                          topic = data.topic,
-                          schema = data.schema,
-                          insert = data.insert,
-                          update = data.update,
-                          delete = data.delete)))
-                      } yield dbStream
-                      complete(action)
-                    }
-                  },
-
-                  put {
-                    entity(as[AddTableStream]) { data =>
-                      val action = for {
-                        _ <- TriggersRepo.delete(data.schema, data.topic, data.table, dataSource.getConnection)
-                        _ <- db.run(DbStreamRepo.delete(data.topic))
-                        _ <- TriggersRepo.create(data.schema, data.table, data.topic, data.delete, data.insert, data.update, dataSource.getConnection)
-                        dbStream <- db.run(DbStreamRepo.add(DbStream(
-                          title = data.title,
-                          description = data.description,
-                          table = data.table,
-                          topic = data.topic,
-                          schema = data.schema,
-                          insert = data.insert,
-                          update = data.update,
-                          delete = data.delete)))
-                      } yield dbStream
-                      complete(action)
-                    }
-                  },
-
-                  delete {
-                    path(Segment / Segment / Segment) { (schema, table, topic) =>
-                      val con = dataSource.getConnection
-                      val action = for {
-                        _ <- TriggersRepo.delete(schema, topic, table, con)
-                        _ <- db.run(DbStreamRepo.delete(topic))
-                      } yield ("ok")
-                      complete(action)
-                    }
+      handleExceptions(errorHandler) {
+        pathPrefix("api") {
+          concat(
+            pathPrefix("streams") {
+              concat(
+                get {
+                  complete(db.run(DbStreamRepo.list()))
+                },
+                post {
+                  entity(as[AddTableStream]) { data =>
+                    val action: DBIOAction[DbStream, NoStream, Effect.All] = (for {
+                      _ <- TriggersRepo.createFunction(data.table, data.topic)
+                      _ <- TriggersRepo.createTrigger(data.schema, data.table, data.topic, data.delete, data.insert, data.update)
+                      dbStream <- DbStreamRepo.add(DbStream(
+                        title = data.title,
+                        description = data.description,
+                        table = data.table,
+                        topic = data.topic,
+                        schema = data.schema,
+                        insert = data.insert,
+                        update = data.update,
+                        delete = data.delete))
+                    } yield dbStream)
+                    complete(db.run(action.transactionally))
                   }
-                )
-              }
-            )
-          }
+                },
+
+                put {
+                  entity(as[AddTableStream]) { data =>
+                    val action = for {
+                      _ <- TriggersRepo.dropTrigger(data.schema, data.topic, data.table)
+                      _ <- TriggersRepo.dropFunction(data.topic, data.table)
+                      _ <- DbStreamRepo.delete(data.topic)
+                      _ <- TriggersRepo.createFunction(data.table, data.topic)
+                      _ <- TriggersRepo.createTrigger(data.schema, data.table, data.topic, data.delete, data.insert, data.update)
+                      dbStream <- DbStreamRepo.add(DbStream(
+                        title = data.title,
+                        description = data.description,
+                        table = data.table,
+                        topic = data.topic,
+                        schema = data.schema,
+                        insert = data.insert,
+                        update = data.update,
+                        delete = data.delete))
+                    } yield dbStream
+                    complete(db.run(action.transactionally))
+                  }
+                },
+
+                delete {
+                  path(Segment / Segment / Segment) { (schema, table, topic) =>
+                    val con = dataSource.getConnection
+                    val action = for {
+                      _ <- TriggersRepo.dropTrigger(schema, topic, table)
+                      _ <- TriggersRepo.dropFunction(topic, table)
+                      _ <- DbStreamRepo.delete(topic)
+                    } yield ()
+                    complete(db.run(action.transactionally))
+                  }
+                }
+              )
+            }
+          )
+        }
       },
       get {
         (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(StatusCodes.TemporaryRedirect)) {
