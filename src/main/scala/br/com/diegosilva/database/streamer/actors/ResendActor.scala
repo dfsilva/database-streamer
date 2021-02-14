@@ -35,7 +35,7 @@ object ResendActor {
         val db: Database = DbExtension.get(context.system).db()
         Behaviors.receiveMessage[ResendActor.Command] {
           case Start(lastId) => {
-            log.debug("Resend Start event")
+//            log.debug("Resend Start event")
             timers.cancel(ResendTimerKey)
             val pendingMessages = Await.result(db.run(EventsTableRepo.pendingMessages(lastId, 1000)), 2.seconds)
             if (!pendingMessages.isEmpty) {
@@ -51,7 +51,7 @@ object ResendActor {
               timers.startSingleTimer(ResendTimerKey, Start(pendingMessages.last.id.get), 2.seconds)
               Behaviors.same
             } else {
-              log.debug("No messages to send")
+//              log.debug("No messages to send")
               timers.startSingleTimer(ResendTimerKey, Start(lastId), 2.seconds)
               Behaviors.same
             }

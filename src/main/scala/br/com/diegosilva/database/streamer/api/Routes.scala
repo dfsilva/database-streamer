@@ -118,7 +118,6 @@ class Routes() extends FailFastCirceSupport with CORSHandler {
 
                 delete {
                   path(Segment / Segment / Segment) { (schema, table, topic) =>
-                    val con = dataSource.getConnection
                     val action = for {
                       _ <- TriggersRepo.dropTrigger(schema, topic, table)
                       _ <- TriggersRepo.dropFunction(topic, table)

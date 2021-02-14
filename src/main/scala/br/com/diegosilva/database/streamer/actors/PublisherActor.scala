@@ -49,7 +49,7 @@ object PublisherActor {
               case Some(notification) => {
                 val natsMessage = NatsNotification(notification.old, notification.current).asJson.noSpaces
                 log.debug("Sending message {} to topic {}", natsMessage, notification.topic)
-                val natsKey = Await.result(NatsPublisher(NatsConnectionExtension.get(context.system).streamingConnection, notification.topic, natsMessage), 500.millis)
+                val natsKey = Await.result(NatsPublisher(NatsConnectionExtension.get(context.system).connection(), notification.topic, natsMessage), 500.millis)
                 log.debug("Message sent {}", natsKey)
                 Await.result(db.run(EventsTableRepo.delete(notification.id)), 1.second)
                 timers.startSingleTimer(TimerKey, ProcessMessage(), 50.millis)
