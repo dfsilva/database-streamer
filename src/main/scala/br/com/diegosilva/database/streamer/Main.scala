@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SpawnProtocol}
 import akka.actor.{Address, AddressFromURIString}
 import akka.cluster.typed.{Cluster, JoinSeedNodes}
 import akka.util.Timeout
-import br.com.diegosilva.database.streamer.actors.{ListenerActor, ProcessActor, ResendActor}
+import br.com.diegosilva.database.streamer.actors.{ProcessActor, ResendActor}
 import br.com.diegosilva.database.streamer.api.{Routes, Server}
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory

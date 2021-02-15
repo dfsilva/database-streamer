@@ -10,8 +10,7 @@ import slick.jdbc.hikaricp.HikariCPJdbcDataSource
 
 import scala.util.{Failure, Success, Try}
 
-class DbExtensionImpl(system: ActorSystem[_], val ds: HikariDataSource, val database: Database) extends Extension {
-  def dataSource(): HikariDataSource = ds
+class DbExtensionImpl(system: ActorSystem[_], database: Database) extends Extension {
   def db(): Database = database
 }
 
@@ -37,7 +36,7 @@ object DbExtension extends ExtensionId[DbExtensionImpl] {
       db.close()
     })(system.executionContext)
 
-    new DbExtensionImpl(system, pool, db)
+    new DbExtensionImpl(system, db)
   }
 
   private def getDb(system: ActorSystem[_]): Database = {

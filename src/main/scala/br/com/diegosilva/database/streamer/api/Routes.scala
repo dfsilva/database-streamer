@@ -47,15 +47,12 @@ object Routes {
 
 class Routes() extends FailFastCirceSupport with CORSHandler {
 
-
   import br.com.diegosilva.database.streamer.Main._
   import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
   private val sharding = ClusterSharding(system)
-  private val dataSource = DbExtension(system).dataSource()
   private val db = DbExtension(system).db()
-
 
   val errorHandler = ExceptionHandler {
     case ex =>
