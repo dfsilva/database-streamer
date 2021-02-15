@@ -44,7 +44,7 @@ libraryDependencies ++= {
 
     "de.heikoseeberger" %% "akka-http-circe" % "1.35.3",
 
-    "io.nats" % "java-nats-streaming" % "2.2.3",
+    "br.com.diego.silva" % "nats-stream-sdk" % "1.0-SNAPSHOT",
   )
 }
 
