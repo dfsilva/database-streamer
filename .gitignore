@@ -34,3 +34,4 @@ build
 *.class
 cassandra/
 .bsp
+docker/database-streamer.jar

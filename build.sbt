@@ -48,7 +48,7 @@ libraryDependencies ++= {
   )
 }
 
-assemblyJarName in assembly := "server.jar"
+assemblyJarName in assembly := "database-streamer.jar"
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", xs @ _*) =>
