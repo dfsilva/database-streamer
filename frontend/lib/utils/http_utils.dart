@@ -7,9 +7,9 @@ import 'message.dart';
 
 class Api {
   static getApiUrl() {
-    print("${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api");
-    // return "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api";
-    return "http://localhost:8082/api";
+    // print("${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api");
+    return "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api";
+    // return "http://localhost:8082/api";
   }
 
   static handleError(error) {
