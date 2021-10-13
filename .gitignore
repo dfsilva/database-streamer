@@ -35,3 +35,7 @@ build
 cassandra/
 .bsp
 docker/database-streamer.jar
+null
+.bloop
+.metals
+/*.bloop
