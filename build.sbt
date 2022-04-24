@@ -48,9 +48,12 @@ libraryDependencies ++= {
   )
 }
 
+scalacOptions += "-Ymacro-annotations"
+
 assemblyJarName in assembly := "database-streamer.jar"
 
 assemblyMergeStrategy in assembly := {
+  case PathList("reference.conf") => MergeStrategy.concat
   case PathList("META-INF", xs @ _*) =>
     (xs map {_.toLowerCase}) match {
       case ("manifest.mf" :: Nil) | ("index.list" :: Nil) | ("dependencies" :: Nil) =>
@@ -65,10 +68,8 @@ assemblyMergeStrategy in assembly := {
         MergeStrategy.filterDistinctLines
       case _ => MergeStrategy.discard
     }
-  case PathList("reference.conf") => MergeStrategy.concat
   case _ => MergeStrategy.first
 }
-
 
 dockerfile in docker := {
   val artifact: File = assembly.value
