@@ -71,6 +71,8 @@ assemblyMergeStrategy in assembly := {
   case _ => MergeStrategy.first
 }
 
+mainClass in assembly := Some("br.com.diegosilva.database.streamer.Main")
+
 dockerfile in docker := {
   val artifact: File = assembly.value
   val artifactTargetPath = s"/app/${artifact.name}"
