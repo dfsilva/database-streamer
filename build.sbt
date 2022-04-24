@@ -11,7 +11,7 @@ resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= {
   val akka = "com.typesafe.akka"
-  val akkaV = "2.6.16"
+  val akkaV = "2.6.18"
   val akkaHttpV = "10.2.6"
   val circeVersion = "0.14.1"
   val slickVersion = "3.3.3"
@@ -44,7 +44,7 @@ libraryDependencies ++= {
 
     "de.heikoseeberger" %% "akka-http-circe" % "1.38.2",
 
-    "br.com.diego.silva" % "nats-stream-sdk" % "1.0-SNAPSHOT",
+    "br.com.diego.silva" % "nats-stream-sdk" % "1.0.3-SNAPSHOT",
   )
 }
 
